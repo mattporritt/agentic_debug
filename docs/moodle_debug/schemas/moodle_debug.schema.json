@@ -1,0 +1,1147 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/schemas/moodle_debug.schema.json",
+  "title": "moodle_debug tool contracts",
+  "type": "object",
+  "required": [
+    "definitions",
+    "tools"
+  ],
+  "properties": {
+    "definitions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "errorCode",
+        "confidence",
+        "stopPolicyMode",
+        "stopReason",
+        "summaryDepth",
+        "targetType",
+        "structuredError",
+        "warning",
+        "sessionRef",
+        "runtimeProfileRef",
+        "capturePolicy",
+        "stopPolicy",
+        "frame",
+        "localVariable",
+        "localsForFrame",
+        "exceptionInfo",
+        "moodleFrameAnnotation",
+        "moodleContextMapping",
+        "summaryPayload",
+        "rerunRecipe",
+        "sessionState",
+        "toolSuccessEnvelope",
+        "toolFailureEnvelope"
+      ],
+      "properties": {
+        "errorCode": {
+          "type": "string",
+          "enum": [
+            "XDEBUG_NOT_ENABLED",
+            "DEBUGGER_TRANSPORT_UNAVAILABLE",
+            "TARGET_FAILED_BEFORE_ATTACH",
+            "NO_STOP_EVENT",
+            "SESSION_TIMEOUT",
+            "INVALID_TEST_REF",
+            "INVALID_SCRIPT_PATH",
+            "MOODLE_ROOT_NOT_FOUND",
+            "MOODLE_CONFIG_MISSING",
+            "PHPUNIT_NOT_CONFIGURED",
+            "CONTAINER_RUNTIME_UNAVAILABLE",
+            "STACK_CAPTURE_TRUNCATED",
+            "LOCALS_CAPTURE_TRUNCATED",
+            "SESSION_NOT_FOUND",
+            "SESSION_EXPIRED",
+            "SUMMARY_UNCERTAIN",
+            "INSUFFICIENT_SESSION_ARTIFACTS",
+            "INVALID_REQUEST",
+            "INTERNAL_ORCHESTRATION_ERROR"
+          ]
+        },
+        "confidence": {
+          "type": "string",
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ]
+        },
+        "stopPolicyMode": {
+          "type": "string",
+          "enum": [
+            "first_exception",
+            "first_error",
+            "first_exception_or_error"
+          ]
+        },
+        "stopReason": {
+          "type": "string",
+          "enum": [
+            "exception",
+            "error",
+            "breakpoint",
+            "target_exit",
+            "timeout",
+            "unknown"
+          ]
+        },
+        "summaryDepth": {
+          "type": "string",
+          "enum": [
+            "brief",
+            "standard",
+            "detailed"
+          ]
+        },
+        "targetType": {
+          "type": "string",
+          "enum": [
+            "phpunit",
+            "cli"
+          ]
+        },
+        "structuredError": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "code",
+            "message",
+            "retryable"
+          ],
+          "properties": {
+            "code": {
+              "$ref": "#/properties/definitions/properties/errorCode"
+            },
+            "message": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 500
+            },
+            "retryable": {
+              "type": "boolean"
+            },
+            "diagnostic_hints": {
+              "type": "array",
+              "maxItems": 10,
+              "items": {
+                "type": "string",
+                "maxLength": 300
+              }
+            },
+            "details": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        },
+        "warning": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "code",
+            "message"
+          ],
+          "properties": {
+            "code": {
+              "type": "string",
+              "enum": [
+                "STACK_CAPTURE_TRUNCATED",
+                "LOCALS_CAPTURE_TRUNCATED",
+                "SUMMARY_UNCERTAIN"
+              ]
+            },
+            "message": {
+              "type": "string",
+              "maxLength": 300
+            }
+          }
+        },
+        "sessionRef": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "session_id",
+            "created_at",
+            "expires_at",
+            "state"
+          ],
+          "properties": {
+            "session_id": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128
+            },
+            "created_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "expires_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "state": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "stopped",
+                "completed",
+                "failed",
+                "expired"
+              ]
+            }
+          }
+        },
+        "runtimeProfileRef": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "profile_name"
+          ],
+          "properties": {
+            "profile_name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            },
+            "launcher_kind": {
+              "type": "string",
+              "enum": [
+                "host",
+                "docker_exec",
+                "custom_wrapper"
+              ]
+            },
+            "working_directory": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "capturePolicy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "max_frames",
+            "max_locals_per_frame",
+            "max_string_length",
+            "include_args",
+            "include_locals",
+            "focus_top_frames"
+          ],
+          "properties": {
+            "max_frames": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            },
+            "max_locals_per_frame": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 20
+            },
+            "max_string_length": {
+              "type": "integer",
+              "minimum": 32,
+              "maximum": 4096
+            },
+            "include_args": {
+              "type": "boolean"
+            },
+            "include_locals": {
+              "type": "boolean"
+            },
+            "focus_top_frames": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10
+            }
+          }
+        },
+        "stopPolicy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "mode"
+          ],
+          "properties": {
+            "mode": {
+              "$ref": "#/properties/definitions/properties/stopPolicyMode"
+            }
+          }
+        },
+        "frame": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "index",
+            "function"
+          ],
+          "properties": {
+            "index": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "file": {
+              "type": "string"
+            },
+            "line": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "class": {
+              "type": "string"
+            },
+            "function": {
+              "type": "string",
+              "minLength": 1
+            },
+            "args": {
+              "type": "array",
+              "maxItems": 20,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "name",
+                  "type",
+                  "value_preview"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "maxLength": 100
+                  },
+                  "type": {
+                    "type": "string",
+                    "maxLength": 100
+                  },
+                  "value_preview": {
+                    "type": "string",
+                    "maxLength": 2048
+                  },
+                  "redacted": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "localVariable": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "type",
+            "value_preview",
+            "redacted"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "maxLength": 100
+            },
+            "type": {
+              "type": "string",
+              "maxLength": 100
+            },
+            "value_preview": {
+              "type": "string",
+              "maxLength": 2048
+            },
+            "redacted": {
+              "type": "boolean"
+            }
+          }
+        },
+        "localsForFrame": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "frame_index",
+            "locals"
+          ],
+          "properties": {
+            "frame_index": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "locals": {
+              "type": "array",
+              "maxItems": 20,
+              "items": {
+                "$ref": "#/properties/definitions/properties/localVariable"
+              }
+            }
+          }
+        },
+        "exceptionInfo": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "message"
+          ],
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "message": {
+              "type": "string",
+              "maxLength": 2000
+            },
+            "code": {
+              "type": [
+                "string",
+                "integer"
+              ]
+            },
+            "file": {
+              "type": "string"
+            },
+            "line": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "moodleFrameAnnotation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "frame_index",
+            "category",
+            "confidence",
+            "facts",
+            "inferences"
+          ],
+          "properties": {
+            "frame_index": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "component": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "subsystem": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "category": {
+              "type": "string",
+              "enum": [
+                "core",
+                "plugin",
+                "renderer",
+                "external_api",
+                "access_control",
+                "form_processing",
+                "database",
+                "task_execution",
+                "test_harness",
+                "unknown"
+              ]
+            },
+            "confidence": {
+              "$ref": "#/properties/definitions/properties/confidence"
+            },
+            "facts": {
+              "type": "array",
+              "maxItems": 10,
+              "items": {
+                "type": "string",
+                "maxLength": 300
+              }
+            },
+            "inferences": {
+              "type": "array",
+              "maxItems": 10,
+              "items": {
+                "type": "string",
+                "maxLength": 300
+              }
+            }
+          }
+        },
+        "moodleContextMapping": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "annotations",
+            "execution_context",
+            "candidate_fault_frame_indexes"
+          ],
+          "properties": {
+            "annotations": {
+              "type": "array",
+              "maxItems": 50,
+              "items": {
+                "$ref": "#/properties/definitions/properties/moodleFrameAnnotation"
+              }
+            },
+            "execution_context": {
+              "type": "string",
+              "enum": [
+                "phpunit",
+                "cli_task",
+                "cli_admin",
+                "renderer",
+                "external_api",
+                "access_control",
+                "form_processing",
+                "database",
+                "unknown"
+              ]
+            },
+            "candidate_fault_frame_indexes": {
+              "type": "array",
+              "maxItems": 10,
+              "items": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "probable_fault_frame_index": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "summaryPayload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "headline",
+            "facts",
+            "inferences",
+            "confidence",
+            "suggested_next_actions"
+          ],
+          "properties": {
+            "headline": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 300
+            },
+            "facts": {
+              "type": "array",
+              "maxItems": 15,
+              "items": {
+                "type": "string",
+                "maxLength": 400
+              }
+            },
+            "inferences": {
+              "type": "array",
+              "maxItems": 15,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "statement",
+                  "confidence"
+                ],
+                "properties": {
+                  "statement": {
+                    "type": "string",
+                    "maxLength": 400
+                  },
+                  "confidence": {
+                    "$ref": "#/properties/definitions/properties/confidence"
+                  }
+                }
+              }
+            },
+            "probable_fault": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "frame_index": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "component": {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                "reason": {
+                  "type": "string",
+                  "maxLength": 400
+                }
+              }
+            },
+            "confidence": {
+              "$ref": "#/properties/definitions/properties/confidence"
+            },
+            "suggested_next_actions": {
+              "type": "array",
+              "maxItems": 10,
+              "items": {
+                "type": "string",
+                "maxLength": 300
+              }
+            }
+          }
+        },
+        "rerunRecipe": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "launcher",
+            "command"
+          ],
+          "properties": {
+            "launcher": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 20,
+              "items": {
+                "type": "string",
+                "maxLength": 300
+              }
+            },
+            "command": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 50,
+              "items": {
+                "type": "string",
+                "maxLength": 500
+              }
+            },
+            "cwd": {
+              "type": "string"
+            },
+            "notes": {
+              "type": "array",
+              "maxItems": 10,
+              "items": {
+                "type": "string",
+                "maxLength": 300
+              }
+            }
+          }
+        },
+        "sessionState": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "session",
+            "target_type",
+            "runtime_profile"
+          ],
+          "properties": {
+            "session": {
+              "$ref": "#/properties/definitions/properties/sessionRef"
+            },
+            "target_type": {
+              "$ref": "#/properties/definitions/properties/targetType"
+            },
+            "runtime_profile": {
+              "$ref": "#/properties/definitions/properties/runtimeProfileRef"
+            },
+            "moodle_root": {
+              "type": "string"
+            },
+            "warnings": {
+              "type": "array",
+              "items": {
+                "$ref": "#/properties/definitions/properties/warning"
+              }
+            }
+          }
+        },
+        "toolSuccessEnvelope": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "ok"
+          ],
+          "properties": {
+            "ok": {
+              "const": true
+            }
+          }
+        },
+        "toolFailureEnvelope": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "ok",
+            "error"
+          ],
+          "properties": {
+            "ok": {
+              "const": false
+            },
+            "error": {
+              "$ref": "#/properties/definitions/properties/structuredError"
+            }
+          }
+        }
+      }
+    },
+    "tools": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "debug_phpunit_test",
+        "debug_cli_script",
+        "get_debug_session",
+        "summarise_debug_session",
+        "map_stack_to_moodle_context"
+      ],
+      "properties": {
+        "debug_phpunit_test": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "input",
+            "success",
+            "failure"
+          ],
+          "properties": {
+            "input": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "moodle_root",
+                "test_ref",
+                "runtime_profile",
+                "stop_policy",
+                "capture_policy",
+                "timeout_seconds"
+              ],
+              "properties": {
+                "moodle_root": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "test_ref": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 500
+                },
+                "runtime_profile": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 100
+                },
+                "stop_policy": {
+                  "$ref": "#/properties/definitions/properties/stopPolicy"
+                },
+                "capture_policy": {
+                  "$ref": "#/properties/definitions/properties/capturePolicy"
+                },
+                "timeout_seconds": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 600
+                },
+                "idempotency_key": {
+                  "type": "string",
+                  "maxLength": 200
+                }
+              }
+            },
+            "success": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "ok",
+                "session",
+                "result"
+              ],
+              "properties": {
+                "ok": {
+                  "const": true
+                },
+                "session": {
+                  "$ref": "#/properties/definitions/properties/sessionState"
+                },
+                "result": {
+                  "$ref": "#/$defs/debugRunResult"
+                }
+              }
+            },
+            "failure": {
+              "$ref": "#/properties/definitions/properties/toolFailureEnvelope"
+            }
+          }
+        },
+        "debug_cli_script": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "input",
+            "success",
+            "failure"
+          ],
+          "properties": {
+            "input": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "moodle_root",
+                "script_path",
+                "script_args",
+                "runtime_profile",
+                "stop_policy",
+                "capture_policy",
+                "timeout_seconds"
+              ],
+              "properties": {
+                "moodle_root": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "script_path": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 500
+                },
+                "script_args": {
+                  "type": "array",
+                  "maxItems": 50,
+                  "items": {
+                    "type": "string",
+                    "maxLength": 500
+                  }
+                },
+                "runtime_profile": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 100
+                },
+                "stop_policy": {
+                  "$ref": "#/properties/definitions/properties/stopPolicy"
+                },
+                "capture_policy": {
+                  "$ref": "#/properties/definitions/properties/capturePolicy"
+                },
+                "timeout_seconds": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 600
+                },
+                "idempotency_key": {
+                  "type": "string",
+                  "maxLength": 200
+                }
+              }
+            },
+            "success": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "ok",
+                "session",
+                "result"
+              ],
+              "properties": {
+                "ok": {
+                  "const": true
+                },
+                "session": {
+                  "$ref": "#/properties/definitions/properties/sessionState"
+                },
+                "result": {
+                  "$ref": "#/$defs/debugRunResult"
+                }
+              }
+            },
+            "failure": {
+              "$ref": "#/properties/definitions/properties/toolFailureEnvelope"
+            }
+          }
+        },
+        "get_debug_session": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "input",
+            "success",
+            "failure"
+          ],
+          "properties": {
+            "input": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "session_id"
+              ],
+              "properties": {
+                "session_id": {
+                  "type": "string",
+                  "minLength": 8,
+                  "maxLength": 128
+                },
+                "include": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "result": {
+                      "type": "boolean"
+                    },
+                    "summary": {
+                      "type": "boolean"
+                    },
+                    "mapping": {
+                      "type": "boolean"
+                    },
+                    "locals": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            },
+            "success": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "ok",
+                "session"
+              ],
+              "properties": {
+                "ok": {
+                  "const": true
+                },
+                "session": {
+                  "$ref": "#/properties/definitions/properties/sessionState"
+                },
+                "result": {
+                  "$ref": "#/$defs/debugRunResult"
+                }
+              }
+            },
+            "failure": {
+              "$ref": "#/properties/definitions/properties/toolFailureEnvelope"
+            }
+          }
+        },
+        "summarise_debug_session": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "input",
+            "success",
+            "failure"
+          ],
+          "properties": {
+            "input": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "session_id"
+              ],
+              "properties": {
+                "session_id": {
+                  "type": "string",
+                  "minLength": 8,
+                  "maxLength": 128
+                },
+                "summary_depth": {
+                  "$ref": "#/properties/definitions/properties/summaryDepth"
+                },
+                "focus": {
+                  "type": "string",
+                  "maxLength": 200
+                }
+              }
+            },
+            "success": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "ok",
+                "summary"
+              ],
+              "properties": {
+                "ok": {
+                  "const": true
+                },
+                "summary": {
+                  "$ref": "#/properties/definitions/properties/summaryPayload"
+                },
+                "warnings": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/properties/definitions/properties/warning"
+                  }
+                }
+              }
+            },
+            "failure": {
+              "$ref": "#/properties/definitions/properties/toolFailureEnvelope"
+            }
+          }
+        },
+        "map_stack_to_moodle_context": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "input",
+            "success",
+            "failure"
+          ],
+          "properties": {
+            "input": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "moodle_root",
+                "frames"
+              ],
+              "properties": {
+                "moodle_root": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "frames": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 50,
+                  "items": {
+                    "$ref": "#/properties/definitions/properties/frame"
+                  }
+                },
+                "exception": {
+                  "$ref": "#/properties/definitions/properties/exceptionInfo"
+                },
+                "test_context": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "test_ref": {
+                      "type": "string",
+                      "maxLength": 500
+                    }
+                  }
+                }
+              }
+            },
+            "success": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "ok",
+                "mapping"
+              ],
+              "properties": {
+                "ok": {
+                  "const": true
+                },
+                "mapping": {
+                  "$ref": "#/properties/definitions/properties/moodleContextMapping"
+                }
+              }
+            },
+            "failure": {
+              "$ref": "#/properties/definitions/properties/toolFailureEnvelope"
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "debugRunResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target",
+        "stop_event",
+        "frames",
+        "locals_by_frame",
+        "moodle_mapping",
+        "summary",
+        "rerun"
+      ],
+      "properties": {
+        "target": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type"
+          ],
+          "properties": {
+            "type": {
+              "$ref": "#/properties/definitions/properties/targetType"
+            },
+            "normalized_test_ref": {
+              "type": "string",
+              "maxLength": 500
+            },
+            "script_path": {
+              "type": "string",
+              "maxLength": 500
+            },
+            "script_args": {
+              "type": "array",
+              "maxItems": 50,
+              "items": {
+                "type": "string",
+                "maxLength": 500
+              }
+            }
+          }
+        },
+        "stop_event": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "reason",
+            "stopped_at"
+          ],
+          "properties": {
+            "reason": {
+              "$ref": "#/properties/definitions/properties/stopReason"
+            },
+            "stopped_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "exception": {
+              "$ref": "#/properties/definitions/properties/exceptionInfo"
+            }
+          }
+        },
+        "frames": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "$ref": "#/properties/definitions/properties/frame"
+          }
+        },
+        "locals_by_frame": {
+          "type": "array",
+          "maxItems": 10,
+          "items": {
+            "$ref": "#/properties/definitions/properties/localsForFrame"
+          }
+        },
+        "moodle_mapping": {
+          "$ref": "#/properties/definitions/properties/moodleContextMapping"
+        },
+        "summary": {
+          "$ref": "#/properties/definitions/properties/summaryPayload"
+        },
+        "rerun": {
+          "$ref": "#/properties/definitions/properties/rerunRecipe"
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/properties/definitions/properties/warning"
+          }
+        }
+      }
+    }
+  }
+}
