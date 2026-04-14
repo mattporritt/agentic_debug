@@ -24,7 +24,7 @@ final class SummaryBuilder
         $faultAnnotation = $annotationByFrame[$probableFaultIndex] ?? null;
         $component = $faultAnnotation['component'] ?? 'unknown';
         $headline = sprintf(
-            'Mocked %s stop near %s',
+            'Debug %s stop near %s',
             (string) ($stopEvent['reason'] ?? 'unknown'),
             $component
         );
@@ -64,7 +64,7 @@ final class SummaryBuilder
             'probable_fault' => [
                 'frame_index' => $probableFaultIndex,
                 'component' => $component,
-                'reason' => 'First mapped non-harness frame in the mocked stack.',
+                'reason' => 'First mapped non-harness frame in the captured stack.',
             ],
             'confidence' => $faultAnnotation['confidence'] ?? 'medium',
             'suggested_next_actions' => [

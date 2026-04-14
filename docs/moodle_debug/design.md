@@ -2,6 +2,12 @@
 
 ## 1. Executive summary
 
+Implementation note:
+
+- The original design assumed a generic debugger MCP or adapter under the Moodle-aware wrapper.
+- The current repository implementation keeps the same public MCP contract and internal seam, but the real backend phase uses an in-process DBGp listener implemented inside `moodle_debug` rather than depending on a separate debugger MCP.
+- This keeps the architecture aligned with the original wrapper goal while staying locally scriptable and testable for PHPUnit and CLI workflows.
+
 `moodle_debug` is a Moodle-aware MCP server that orchestrates deterministic, local debug sessions for Moodle CLI commands and PHPUnit tests by coordinating:
 
 - a Moodle-specific launch strategy
@@ -17,8 +23,9 @@ Problem solved:
 What `moodle_debug` does not do:
 
 - It is not a PHP debugger.
-- It does not implement the DBGp protocol.
-- It does not replace Xdebug, a debug adapter, or an existing generic debug MCP.
+- It does not implement a full PHP debug engine or replace Xdebug.
+- It may speak a narrow subset of DBGp internally in order to drive Xdebug for the supported workflows.
+- It does not expose raw debugger operations as public MCP tools.
 - It does not provide arbitrary process attach, free-form remote debugging, browser automation, profiling, or coverage in v1.
 
 Why this should be a Moodle-aware wrapper instead of a custom debugger:
@@ -47,7 +54,7 @@ In short: `moodle_debug` should own the Moodle-specific workflow and interpretat
 
 ### Explicit non-goals
 
-- Implementing a PHP debugger, DBGp transport, or custom stepping engine.
+- Implementing a PHP debugger or general-purpose interactive stepping engine.
 - Arbitrary attachment to already-running PHP processes.
 - Full interactive debugger UI replacement.
 - General web-request debugging in v1.
@@ -60,29 +67,19 @@ In short: `moodle_debug` should own the Moodle-specific workflow and interpretat
 
 - The repository using `moodle_debug` is a local Moodle development environment or tooling environment with access to a Moodle checkout.
 - Xdebug is available or can be enabled in the relevant PHP runtime/container.
-- An existing generic Xdebug-compatible debug MCP or debug adapter is available and can:
-  - launch or coordinate a PHP debug session
-  - enable break-on-exception or equivalent stopping rules
-  - read stack frames
-  - read locals/scopes
-  - continue until stop/exit/timeout
 - Moodle entrypoints are known or can be configured.
 - The primary consumer is an agentic coding assistant, not a human-operated IDE.
+- The current repository implementation uses a local in-process DBGp listener as the concrete backend adapter for Xdebug-backed runs.
 
 ### External dependencies
 
 `moodle_debug` depends on:
 
 - Xdebug for runtime instrumentation and breakpoint/exception stop behavior
-- a generic debug MCP or adapter for low-level operations such as:
-  - session establishment
-  - stop handling
-  - stack retrieval
-  - variable retrieval
-  - execution control
 - local Moodle CLI/PHPUnit runtime, either:
   - directly on host
   - inside a configured Docker/container workflow
+- a thin internal DBGp adapter layer in the current implementation
 
 ### Environmental assumptions about local Moodle development
 
@@ -445,7 +442,7 @@ Why it exists:
 Input schema:
 
 - `session_id`
-- `include`: artifact selection flags
+- `include`: optional object supporting only `result: true|false` in v1
 
 Output schema:
 
@@ -846,6 +843,11 @@ The canonical failure catalog is also encoded in the schema file. v1 should stan
 | Error code | Message style | Retryable | Diagnostic hint |
 |---|---|---:|---|
 | `XDEBUG_NOT_ENABLED` | concise, factual | yes | Verify Xdebug is installed/enabled in selected runtime profile |
+| `DOCKER_COMPOSE_BINARY_MISSING` | concise, factual | yes | Verify the configured Docker compose command or `MOODLE_DOCKER_BIN_DIR` |
+| `DOCKER_SERVICE_NOT_RUNNING` | concise, factual | yes | Start the configured Docker `webserver` service |
+| `DOCKER_SERVICE_NOT_FOUND` | concise, factual | no | Verify `WEBSERVER_SERVICE` or the runtime profile service name |
+| `DOCKER_EXEC_FAILED` | concise, factual | maybe | Inspect normalized docker exec command and stderr |
+| `XDEBUG_CALLBACK_HOST_UNRESOLVABLE` | concise, factual | yes | Verify `host.docker.internal` or override `xdebug_client_host` |
 | `DEBUGGER_TRANSPORT_UNAVAILABLE` | concise, factual | yes | Verify generic debugger service/adapter is reachable |
 | `TARGET_FAILED_BEFORE_ATTACH` | concise, factual | maybe | Check command/bootstrap failure and runtime logs |
 | `NO_STOP_EVENT` | concise, factual | yes | Increase timeout or verify stop policy and reproducibility |
@@ -1015,6 +1017,11 @@ Why these files:
 - `schemas/...json`: machine-usable source of truth for implementation and tests
 - ADR: records the key architectural decision not to build a custom debugger
 - implementation plan: turns the design into discrete execution phases
+
+Phase 2 cleanup note:
+
+- `session.runtime_profile.launcher_kind` now truthfully mirrors the runtime profile kind and only allows `phpunit` or `cli`
+- `get_debug_session.include` is intentionally limited to `result: true|false`; finer-grained artifact pruning is deferred
 
 ## Recommended next Codex prompt
 

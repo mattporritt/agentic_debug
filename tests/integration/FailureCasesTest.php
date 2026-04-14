@@ -118,4 +118,91 @@ final class FailureCasesTest extends TestCase
         self::assertFalse($result['ok']);
         self::assertSame('SESSION_NOT_FOUND', $result['error']['code']);
     }
+
+    public function testGetDebugSessionCanOmitResultExplicitly(): void
+    {
+        $app = TestApplicationFactory::create(
+            $this->repoRoot,
+            sys_get_temp_dir() . '/moodle_debug_failures_' . uniqid('', true),
+            new FixedClock(new \DateTimeImmutable('2026-04-14T00:00:00+00:00'))
+        );
+
+        $created = $app->debugPhpunitTest([
+            'moodle_root' => $this->repoRoot . '/_smoke_test/moodle_fixture',
+            'test_ref' => 'mod_assign\\tests\\grading_test::test_grade_submission',
+            'runtime_profile' => 'default_phpunit',
+            'stop_policy' => ['mode' => 'first_exception_or_error'],
+            'capture_policy' => [
+                'max_frames' => 25,
+                'max_locals_per_frame' => 10,
+                'max_string_length' => 512,
+                'include_args' => true,
+                'include_locals' => true,
+                'focus_top_frames' => 5,
+            ],
+            'timeout_seconds' => 120,
+        ]);
+
+        $fetched = $app->getDebugSession([
+            'session_id' => $created['session']['session']['session_id'],
+            'include' => [
+                'result' => false,
+            ],
+        ]);
+
+        self::assertTrue($fetched['ok']);
+        self::assertArrayNotHasKey('result', $fetched);
+    }
+
+    public function testGetDebugSessionReturnsResultByDefault(): void
+    {
+        $app = TestApplicationFactory::create(
+            $this->repoRoot,
+            sys_get_temp_dir() . '/moodle_debug_failures_' . uniqid('', true),
+            new FixedClock(new \DateTimeImmutable('2026-04-14T00:00:00+00:00'))
+        );
+
+        $created = $app->debugCliScript([
+            'moodle_root' => $this->repoRoot . '/_smoke_test/moodle_fixture',
+            'script_path' => 'admin/cli/some_script.php',
+            'script_args' => [],
+            'runtime_profile' => 'default_cli',
+            'stop_policy' => ['mode' => 'first_exception_or_error'],
+            'capture_policy' => [
+                'max_frames' => 25,
+                'max_locals_per_frame' => 10,
+                'max_string_length' => 512,
+                'include_args' => true,
+                'include_locals' => true,
+                'focus_top_frames' => 5,
+            ],
+            'timeout_seconds' => 120,
+        ]);
+
+        $fetched = $app->getDebugSession([
+            'session_id' => $created['session']['session']['session_id'],
+        ]);
+
+        self::assertTrue($fetched['ok']);
+        self::assertArrayHasKey('result', $fetched);
+    }
+
+    public function testUnsupportedGetDebugSessionIncludeFieldIsRejected(): void
+    {
+        $app = TestApplicationFactory::create(
+            $this->repoRoot,
+            sys_get_temp_dir() . '/moodle_debug_failures_' . uniqid('', true),
+            new FixedClock(new \DateTimeImmutable('2026-04-14T00:00:00+00:00'))
+        );
+
+        $result = $app->getDebugSession([
+            'session_id' => 'mds_missing_session',
+            'include' => [
+                'summary' => true,
+            ],
+        ]);
+
+        self::assertFalse($result['ok']);
+        self::assertSame('INVALID_REQUEST', $result['error']['code']);
+    }
 }

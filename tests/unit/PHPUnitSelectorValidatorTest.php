@@ -19,4 +19,34 @@ final class PHPUnitSelectorValidatorTest extends TestCase
         self::assertSame('mod_assign\\tests\\grading_test::test_grade_submission', $valid['normalized']);
         self::assertFalse($invalid['valid']);
     }
+
+    public function testFallsBackToPublicWebRootWhenGuessingTestFile(): void
+    {
+        $validator = new PHPUnitSelectorValidator();
+        $root = sys_get_temp_dir() . '/moodle_debug_public_root_' . uniqid('', true);
+        mkdir($root . '/public/mod/assign/tests', 0777, true);
+        file_put_contents($root . '/public/mod/assign/tests/grading_test.php', "<?php\n");
+        $result = $validator->validate(
+            'mod_assign\\tests\\grading_test::test_grade_submission',
+            $root
+        );
+
+        self::assertTrue($result['valid']);
+        self::assertSame(
+            $root . '/public/mod/assign/tests/grading_test.php',
+            $result['guessed_test_file']
+        );
+    }
+
+    public function testGuessesPluginTestFileWhenNamespaceOmitsTestsSegment(): void
+    {
+        $validator = new PHPUnitSelectorValidator();
+        $result = $validator->validate(
+            'mod_assign\\base_test::test_example',
+            '/tmp/moodle'
+        );
+
+        self::assertTrue($result['valid']);
+        self::assertSame('/tmp/moodle/mod/assign/tests/base_test.php', $result['guessed_test_file']);
+    }
 }

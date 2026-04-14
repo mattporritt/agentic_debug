@@ -22,19 +22,7 @@ final class PHPUnitSelectorValidator
         $className = $matches['class'];
         $methodName = $matches['method'];
         $parts = explode('\\', $className);
-        $guessedFile = null;
-
-        if (count($parts) >= 3 && $parts[1] === 'tests') {
-            $component = $parts[0];
-            $shortClass = end($parts);
-            if (str_starts_with($component, 'mod_')) {
-                $plugin = substr($component, 4);
-                $guessedFile = "{$moodleRoot}/mod/{$plugin}/tests/{$shortClass}.php";
-            } elseif (str_starts_with($component, 'core_')) {
-                $subsystem = substr($component, 5);
-                $guessedFile = "{$moodleRoot}/{$subsystem}/tests/{$shortClass}.php";
-            }
-        }
+        $guessedFile = $this->guessTestFile($parts, $moodleRoot);
 
         return [
             'valid' => true,
@@ -43,5 +31,54 @@ final class PHPUnitSelectorValidator
             'method_name' => $methodName,
             'guessed_test_file' => $guessedFile,
         ];
+    }
+
+    /**
+     * @param string[] $parts
+     */
+    private function guessTestFile(array $parts, string $moodleRoot): ?string
+    {
+        if (count($parts) < 2) {
+            return null;
+        }
+
+        $component = $parts[0];
+        $relativeParts = array_slice($parts, 1);
+        $relativePath = implode('/', $relativeParts) . '.php';
+
+        if (str_starts_with($component, 'mod_')) {
+            $plugin = substr($component, 4);
+            if (in_array('tests', $relativeParts, true)) {
+                return $this->resolveGuessedFile($moodleRoot, "mod/{$plugin}/{$relativePath}");
+            }
+
+            return $this->resolveGuessedFile($moodleRoot, 'mod/' . $plugin . '/tests/' . $relativePath);
+        }
+
+        if (str_starts_with($component, 'core_')) {
+            $subsystem = substr($component, 5);
+            if (($relativeParts[0] ?? null) === 'tests') {
+                return $this->resolveGuessedFile($moodleRoot, "{$subsystem}/{$relativePath}");
+            }
+
+            return $this->resolveGuessedFile($moodleRoot, $subsystem . '/tests/' . $relativePath);
+        }
+
+        return null;
+    }
+
+    private function resolveGuessedFile(string $moodleRoot, string $relativePath): string
+    {
+        $primary = rtrim($moodleRoot, '/') . '/' . ltrim($relativePath, '/');
+        if (is_file($primary)) {
+            return $primary;
+        }
+
+        $publicFallback = rtrim($moodleRoot, '/') . '/public/' . ltrim($relativePath, '/');
+        if (is_file($publicFallback)) {
+            return $publicFallback;
+        }
+
+        return $primary;
     }
 }

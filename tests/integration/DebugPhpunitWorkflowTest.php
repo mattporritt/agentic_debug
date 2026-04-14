@@ -38,6 +38,7 @@ final class DebugPhpunitWorkflowTest extends TestCase
 
         self::assertTrue($result['ok']);
         self::assertSame('phpunit', $result['result']['target']['type']);
+        self::assertSame('phpunit', $result['session']['runtime_profile']['launcher_kind']);
         self::assertSame('mod_assign', $result['result']['moodle_mapping']['annotations'][0]['component']);
 
         $session = $app->getDebugSession([

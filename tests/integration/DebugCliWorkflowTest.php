@@ -39,6 +39,7 @@ final class DebugCliWorkflowTest extends TestCase
 
         self::assertTrue($result['ok']);
         self::assertSame('cli', $result['result']['target']['type']);
+        self::assertSame('cli', $result['session']['runtime_profile']['launcher_kind']);
         self::assertSame('core_admin', $result['result']['moodle_mapping']['annotations'][0]['component']);
     }
 }

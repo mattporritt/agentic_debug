@@ -17,9 +17,9 @@ final class McpServerFactory
             ->setServerInfo(
                 name: 'moodle_debug',
                 version: '0.1.0',
-                description: 'Mock-backed Moodle-aware debug orchestration server'
+                description: 'Moodle-aware debug orchestration server for mocked and Xdebug-backed PHPUnit/CLI workflows'
             )
-            ->setInstructions('Use these tools for deterministic Moodle PHPUnit and CLI debug orchestration. This phase is mock-backed and read-only after session capture.')
+            ->setInstructions('Use these tools for deterministic Moodle PHPUnit and CLI debug orchestration. Sessions are artifact-backed and read-only after capture. Real runs require an Xdebug-enabled runtime profile.')
             ->addTool(
                 fn (
                     string $moodle_root,
@@ -39,7 +39,7 @@ final class McpServerFactory
                     $idempotency_key,
                 ),
                 'debug_phpunit_test',
-                'Run a mocked Moodle PHPUnit debug workflow for one class-based selector.',
+                'Run a Moodle PHPUnit debug workflow for one class-based selector.',
                 null,
                 $schemaValidator->getToolInputSchema('debug_phpunit_test'),
             )
@@ -64,7 +64,7 @@ final class McpServerFactory
                     $idempotency_key,
                 ),
                 'debug_cli_script',
-                'Run a mocked Moodle CLI debug workflow for one allowlisted script.',
+                'Run a Moodle CLI debug workflow for one allowlisted script.',
                 null,
                 $schemaValidator->getToolInputSchema('debug_cli_script'),
             )

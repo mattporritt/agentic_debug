@@ -20,7 +20,9 @@ if ($command !== 'run') {
     fwrite(STDERR, "Usage:\n");
     fwrite(STDERR, "  php bin/moodle-debug server\n");
     fwrite(STDERR, "  php bin/moodle-debug run phpunit --test \"mod_assign\\\\tests\\\\grading_test::test_grade_submission\"\n");
+    fwrite(STDERR, "  php bin/moodle-debug run phpunit --profile real_xdebug_phpunit --test \"mod_assign\\\\tests\\\\grading_test::test_grade_submission\"\n");
     fwrite(STDERR, "  php bin/moodle-debug run cli --script \"admin/cli/some_script.php\"\n");
+    fwrite(STDERR, "  php bin/moodle-debug run cli --profile real_xdebug_cli --script \"admin/cli/some_script.php\"\n");
     exit(1);
 }
 
