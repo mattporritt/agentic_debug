@@ -6,6 +6,12 @@ namespace MoodleDebug\debug_backend;
 
 use MoodleDebug\runtime\RuntimeProfile;
 
+/**
+ * Builds launch commands and environments for Xdebug-backed runs.
+ *
+ * This class is shared by preflight planning and the real backend so command
+ * construction stays deterministic across dry-run and execute paths.
+ */
 final class XdebugLaunchSettingsBuilder
 {
     /**

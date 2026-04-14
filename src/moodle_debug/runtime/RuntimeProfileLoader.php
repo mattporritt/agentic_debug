@@ -4,6 +4,13 @@ declare(strict_types=1);
 
 namespace MoodleDebug\runtime;
 
+/**
+ * Resolves runtime profiles from checked-in config plus codex-style env values.
+ *
+ * The loader is the main place where repository defaults, local machine
+ * overrides, and Docker-first path mapping rules are reconciled into one stable
+ * runtime profile object.
+ */
 final class RuntimeProfileLoader
 {
     /**

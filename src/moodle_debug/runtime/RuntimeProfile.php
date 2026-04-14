@@ -4,6 +4,12 @@ declare(strict_types=1);
 
 namespace MoodleDebug\runtime;
 
+/**
+ * Immutable resolved runtime profile.
+ *
+ * Profiles represent the fully merged execution context after checked-in
+ * defaults and codex-style environment overrides have been applied.
+ */
 final readonly class RuntimeProfile
 {
     /**

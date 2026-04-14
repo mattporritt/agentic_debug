@@ -1,6 +1,14 @@
 # moodle_debug
 
-`moodle_debug` is a narrow v1 MCP server for Moodle-aware debug orchestration. This repository currently implements:
+`moodle_debug` is a narrow v1 debugging tool for Moodle-aware orchestration.
+
+It exists to make Xdebug-based Moodle debugging usable for agents and
+automation. Instead of exposing raw debugger primitives, it provides explicit
+task-shaped workflows for Moodle PHPUnit tests and allowlisted CLI scripts,
+persists bounded session artifacts, and translates captured runtime data into
+Moodle-aware summaries.
+
+This repository currently implements:
 
 - the agreed v1 tool surface
 - strict JSON-schema validation
@@ -51,6 +59,24 @@ What comes next:
 
 - refine Moodle-aware interpretation heuristics for broader real-session shapes
 - add broader environment coverage once the Docker-first path is stable
+
+## Start here
+
+New to the project:
+
+- user/setup guide: [getting_started.md](/Users/mattp/projects/agentic_debug/docs/moodle_debug/getting_started.md)
+- developer/codebase guide: [developer_guide.md](/Users/mattp/projects/agentic_debug/docs/moodle_debug/developer_guide.md)
+- architecture and contracts: [design.md](/Users/mattp/projects/agentic_debug/docs/moodle_debug/design.md)
+- runtime subprocess contract: [runtime_contract.md](/Users/mattp/projects/agentic_debug/docs/moodle_debug/runtime_contract.md)
+
+Fastest smoke path:
+
+```bash
+composer install
+vendor/bin/phpunit
+php bin/moodle-debug run phpunit --test "mod_assign\\tests\\grading_test::test_grade_submission"
+php bin/moodle-debug health --json '{}'
+```
 
 Current interpretation behavior:
 

@@ -4,6 +4,12 @@ declare(strict_types=1);
 
 namespace MoodleDebug\runtime;
 
+/**
+ * Minimal JSON-only CLI for subprocess orchestration.
+ *
+ * The CLI deliberately avoids mixing prose into stdout so future callers such
+ * as `agentic_orchestrator` can treat it as a stable machine interface.
+ */
 final class RuntimeCli
 {
     public function __construct(
@@ -102,6 +108,8 @@ final class RuntimeCli
             return [];
         }
 
+        // Requests are always object-shaped. An array or scalar would make the
+        // subprocess contract ambiguous for downstream callers.
         $decoded = json_decode($json, true);
         if (!is_array($decoded)) {
             return ['__parse_error' => 'Runtime request must decode to a JSON object.'];

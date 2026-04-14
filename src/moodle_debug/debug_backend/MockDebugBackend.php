@@ -6,6 +6,13 @@ namespace MoodleDebug\debug_backend;
 
 use MoodleDebug\contracts\ClockInterface;
 
+/**
+ * Deterministic in-memory backend used by most tests and smoke flows.
+ *
+ * The mock backend returns stable stack, locals, and exception payloads so
+ * higher-level orchestration and interpretation can be exercised without a real
+ * Xdebug environment.
+ */
 final class MockDebugBackend implements DebugBackendInterface
 {
     /**

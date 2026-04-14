@@ -6,6 +6,12 @@ namespace MoodleDebug\session_store;
 
 use MoodleDebug\contracts\ClockInterface;
 
+/**
+ * File-backed session storage for bounded debugger artifacts.
+ *
+ * Sessions are intentionally immutable snapshots: once a run completes, later
+ * calls only read or expire the saved artifacts.
+ */
 final class FileArtifactSessionStore
 {
     public function __construct(

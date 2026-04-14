@@ -17,6 +17,13 @@ use MoodleDebug\runtime\RuntimeProfile;
 use MoodleDebug\runtime\RuntimeProfileLoader;
 use MoodleDebug\session_store\FileArtifactSessionStore;
 
+/**
+ * Main MCP-facing application service.
+ *
+ * This class owns the stable public debugger workflows. It validates tool
+ * inputs, delegates the runtime mechanics to the selected backend, persists the
+ * bounded session artifacts, and then attaches Moodle-aware interpretation.
+ */
 final class Application
 {
     public function __construct(
@@ -35,6 +42,8 @@ final class Application
     }
 
     /**
+     * Execute the public PHPUnit debug workflow end to end.
+     *
      * @param array<string, mixed> $input
      * @return array<string, mixed>
      */
@@ -71,6 +80,8 @@ final class Application
     }
 
     /**
+     * Execute the public CLI debug workflow end to end.
+     *
      * @param array<string, mixed> $input
      * @return array<string, mixed>
      */
@@ -111,6 +122,8 @@ final class Application
     }
 
     /**
+     * Read an artifact-backed session by id.
+     *
      * @param array<string, mixed> $input
      * @return array<string, mixed>
      */
@@ -143,6 +156,8 @@ final class Application
     }
 
     /**
+     * Rebuild a summary from stored artifacts without rerunning the debugger.
+     *
      * @param array<string, mixed> $input
      * @return array<string, mixed>
      */
@@ -178,6 +193,8 @@ final class Application
     }
 
     /**
+     * Apply Moodle-specific heuristics to an explicit stack payload.
+     *
      * @param array<string, mixed> $input
      * @return array<string, mixed>
      */
@@ -220,6 +237,9 @@ final class Application
         $preparedSession = null;
 
         try {
+            // The backend owns the low-level debugger lifecycle. The application
+            // stays responsible for bounded policies, interpretation, and
+            // artifact persistence.
             $preparedSession = $this->backend->prepare_session([
                 'session_id' => $sessionId,
                 'target' => $target,
@@ -250,6 +270,8 @@ final class Application
             $frames = $this->pathMapper->mapFrames($frames, $profile->pathMappings);
             $focusCount = min((int) $capturePolicy['focus_top_frames'], count($frames));
             $frameIndexes = array_map(static fn (array $frame): int => (int) $frame['index'], array_slice($frames, 0, $focusCount));
+            // Locals are intentionally only captured for a bounded subset of
+            // frames so session artifacts stay stable and safe to persist.
             $locals = $this->backend->read_locals(
                 (string) $preparedSession['backend_session_id'],
                 $frameIndexes,

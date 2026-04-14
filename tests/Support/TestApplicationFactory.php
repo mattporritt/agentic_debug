@@ -13,7 +13,12 @@ use MoodleDebug\runtime\ExecutionPlanFactory;
 use MoodleDebug\runtime\PathMapper;
 use MoodleDebug\runtime\PHPUnitSelectorValidator;
 use MoodleDebug\runtime\RuntimeApplication;
+use MoodleDebug\runtime\RuntimeEnvelopeFactory;
+use MoodleDebug\runtime\RuntimeHealthReporter;
+use MoodleDebug\runtime\RuntimeInvestigationBuilder;
+use MoodleDebug\runtime\RuntimePlanBuilder;
 use MoodleDebug\runtime\RuntimeProfileLoader;
+use MoodleDebug\runtime\RuntimeRequestNormalizer;
 use MoodleDebug\debug_backend\XdebugLaunchSettingsBuilder;
 use MoodleDebug\server\Application;
 use MoodleDebug\server\MoodleContextMapper;
@@ -67,23 +72,35 @@ final class TestApplicationFactory
         $selectorValidator = new PHPUnitSelectorValidator();
         $cliPathValidator = new CliPathValidator();
         $executionPlanFactory = new ExecutionPlanFactory();
-        $contextMapper = new MoodleContextMapper();
         $summaryBuilder = new SummaryBuilder();
+        $runtimeSchemaValidator = new RuntimeSchemaValidator($repoRoot . '/docs/moodle_debug/schemas/runtime_contract.schema.json');
 
         return new RuntimeApplication(
             repoRoot: $repoRoot,
-            schemaValidator: new RuntimeSchemaValidator($repoRoot . '/docs/moodle_debug/schemas/runtime_contract.schema.json'),
+            schemaValidator: $runtimeSchemaValidator,
             application: self::create($repoRoot, $storageDirectory, $clock),
-            profileLoader: $profileLoader,
             sessionStore: $sessionStore,
-            selectorValidator: $selectorValidator,
-            cliPathValidator: $cliPathValidator,
-            executionPlanFactory: $executionPlanFactory,
             summaryBuilder: $summaryBuilder,
-            contextMapper: $contextMapper,
-            xdebugLaunchSettingsBuilder: new XdebugLaunchSettingsBuilder(),
-            environmentLoader: $environmentLoader,
-            clock: $clock,
+            requestNormalizer: new RuntimeRequestNormalizer(),
+            planBuilder: new RuntimePlanBuilder(
+                $profileLoader,
+                $selectorValidator,
+                $cliPathValidator,
+                $executionPlanFactory,
+                new XdebugLaunchSettingsBuilder(),
+            ),
+            investigationBuilder: new RuntimeInvestigationBuilder(),
+            healthReporter: new RuntimeHealthReporter(
+                $repoRoot,
+                $profileLoader,
+                $environmentLoader,
+                $clock,
+            ),
+            envelopeFactory: new RuntimeEnvelopeFactory(
+                $repoRoot,
+                $runtimeSchemaValidator,
+                $clock,
+            ),
         );
     }
 }

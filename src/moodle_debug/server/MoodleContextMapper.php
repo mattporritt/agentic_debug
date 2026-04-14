@@ -4,6 +4,14 @@ declare(strict_types=1);
 
 namespace MoodleDebug\server;
 
+/**
+ * Converts raw stack frames into bounded Moodle-aware interpretation signals.
+ *
+ * The heuristics here are intentionally explicit and conservative. They do not
+ * try to "prove" a root cause. Instead they classify frames, rank likely
+ * inspection points, and separate directly observed facts from Moodle-specific
+ * inferences.
+ */
 final class MoodleContextMapper
 {
     /**
@@ -46,6 +54,8 @@ final class MoodleContextMapper
             $annotations[] = $annotation;
             $faultRanking[] = [
                 'frame_index' => $annotation['frame_index'],
+                // Ranking is intentionally explainable: each score is derived
+                // from a small set of named signals in scoreFrame().
                 'score' => $this->scoreFrame($annotation, $exception, $executionContext),
                 'confidence' => $annotation['confidence'],
                 'rationale' => $this->buildRankingRationale($annotation),

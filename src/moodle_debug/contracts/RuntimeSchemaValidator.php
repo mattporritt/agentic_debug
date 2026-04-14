@@ -7,6 +7,9 @@ namespace MoodleDebug\contracts;
 use Opis\JsonSchema\Errors\ValidationError;
 use Opis\JsonSchema\Validator;
 
+/**
+ * JSON Schema validator for the subprocess-facing runtime contract.
+ */
 final class RuntimeSchemaValidator
 {
     /**

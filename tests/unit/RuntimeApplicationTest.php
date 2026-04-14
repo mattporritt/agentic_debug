@@ -63,5 +63,6 @@ final class RuntimeApplicationTest extends TestCase
         self::assertContains('config', $names);
         self::assertContains('listener', $names);
         self::assertContains('supported_targets', $names);
+        self::assertSame('warn', $response['meta']['status']);
     }
 }

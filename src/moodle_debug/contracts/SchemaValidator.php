@@ -7,6 +7,12 @@ namespace MoodleDebug\contracts;
 use Opis\JsonSchema\Errors\ValidationError;
 use Opis\JsonSchema\Validator;
 
+/**
+ * Thin wrapper around JSON Schema validation for MCP tool contracts.
+ *
+ * The project keeps runtime subprocess schemas separate from MCP schemas so the
+ * two interfaces can evolve independently without confusing each other.
+ */
 final class SchemaValidator
 {
     /**

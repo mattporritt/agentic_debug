@@ -7,6 +7,13 @@ namespace MoodleDebug\debug_backend;
 use MoodleDebug\contracts\ClockInterface;
 use MoodleDebug\runtime\RuntimeProfile;
 
+/**
+ * Real Xdebug-backed implementation of the internal debug backend seam.
+ *
+ * This backend owns the DBGp transport details needed for the supported
+ * workflows. It deliberately keeps those mechanics internal so the public MCP
+ * and runtime contracts can stay task-shaped and deterministic.
+ */
 final class XdebugDebugBackend implements DebugBackendInterface
 {
     private const LISTENER_BIND_ATTEMPTS = 5;
@@ -29,6 +36,8 @@ final class XdebugDebugBackend implements DebugBackendInterface
         $profile = $this->runtimeProfileFromContext($context['runtime_profile'] ?? []);
         $this->settingsBuilder->validateProfile($profile);
 
+        // Bind before launch so a containerized PHP target has somewhere to
+        // connect immediately when Xdebug starts the step-debug session.
         $bindAddress = sprintf('tcp://%s:%d', $profile->listenerBindAddress, $profile->xdebugClientPort);
         $server = $this->bindListenerSocket($bindAddress);
 
@@ -120,6 +129,8 @@ final class XdebugDebugBackend implements DebugBackendInterface
         $connection = $this->acceptConnection($session, $connectTimeoutMs);
         $session['connection'] = $connection;
         $session['attached'] = true;
+        // Release the listening socket as soon as the connection is attached so
+        // later runs do not need to wait for the full session teardown.
         $this->releaseListenerSocket($session);
 
         $initPacket = $this->readPacket($connection, $connectTimeoutMs);

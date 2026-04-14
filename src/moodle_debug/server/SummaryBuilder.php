@@ -4,6 +4,13 @@ declare(strict_types=1);
 
 namespace MoodleDebug\server;
 
+/**
+ * Builds concise agent-facing summaries from captured debug artifacts.
+ *
+ * The summary intentionally stays honest about stop reason and confidence. It
+ * should be useful for follow-up work, but it should never overstate that a
+ * ranked frame is definitely the bug.
+ */
 final class SummaryBuilder
 {
     /**
