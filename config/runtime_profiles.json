@@ -1,0 +1,59 @@
+{
+  "cli_allowlist": [
+    "admin/cli/"
+  ],
+  "session": {
+    "ttl_seconds": 3600,
+    "artifact_bytes_limit": 524288
+  },
+  "profiles": [
+    {
+      "profile_name": "default_phpunit",
+      "launcher_kind": "phpunit",
+      "launcher_argv": [
+        "mock-launcher",
+        "phpunit"
+      ],
+      "php_argv": [
+        "php"
+      ],
+      "moodle_root": "/Users/mattp/projects/agentic_debug/_smoke_test/moodle_fixture",
+      "working_directory": "/Users/mattp/projects/agentic_debug/_smoke_test/moodle_fixture",
+      "path_mappings": {
+        "/var/www/html": "/Users/mattp/projects/agentic_debug/_smoke_test/moodle_fixture"
+      },
+      "env_allowlist": [
+        "MOODLE_DOCKER_WWWROOT"
+      ],
+      "timeout_defaults": {
+        "launch": 5,
+        "attach": 5,
+        "overall": 120
+      }
+    },
+    {
+      "profile_name": "default_cli",
+      "launcher_kind": "cli",
+      "launcher_argv": [
+        "mock-launcher",
+        "cli"
+      ],
+      "php_argv": [
+        "php"
+      ],
+      "moodle_root": "/Users/mattp/projects/agentic_debug/_smoke_test/moodle_fixture",
+      "working_directory": "/Users/mattp/projects/agentic_debug/_smoke_test/moodle_fixture",
+      "path_mappings": {
+        "/var/www/html": "/Users/mattp/projects/agentic_debug/_smoke_test/moodle_fixture"
+      },
+      "env_allowlist": [
+        "MOODLE_DOCKER_WWWROOT"
+      ],
+      "timeout_defaults": {
+        "launch": 5,
+        "attach": 5,
+        "overall": 120
+      }
+    }
+  ]
+}

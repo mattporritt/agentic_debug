@@ -1,0 +1,12 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+use Mcp\Server\Transport\StdioTransport;
+use MoodleDebug\server\McpServerFactory;
+
+require_once __DIR__ . '/../vendor/autoload.php';
+
+$server = (new McpServerFactory())->create(__DIR__ . '/..');
+exit($server->run(new StdioTransport()));

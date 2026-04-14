@@ -1,0 +1,95 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+use Mcp\Server\Transport\StdioTransport;
+use MoodleDebug\server\ApplicationFactory;
+use MoodleDebug\server\McpServerFactory;
+
+require_once __DIR__ . '/../vendor/autoload.php';
+
+$command = $argv[1] ?? null;
+
+if ($command === 'server') {
+    $server = (new McpServerFactory())->create(__DIR__ . '/..');
+    exit($server->run(new StdioTransport()));
+}
+
+if ($command !== 'run') {
+    fwrite(STDERR, "Usage:\n");
+    fwrite(STDERR, "  php bin/moodle-debug server\n");
+    fwrite(STDERR, "  php bin/moodle-debug run phpunit --test \"mod_assign\\\\tests\\\\grading_test::test_grade_submission\"\n");
+    fwrite(STDERR, "  php bin/moodle-debug run cli --script \"admin/cli/some_script.php\"\n");
+    exit(1);
+}
+
+$mode = $argv[2] ?? null;
+$options = [];
+for ($i = 3; $i < count($argv); $i += 2) {
+    $key = $argv[$i] ?? '';
+    $value = $argv[$i + 1] ?? null;
+    if (!str_starts_with($key, '--') || $value === null) {
+        fwrite(STDERR, "Invalid argument format.\n");
+        exit(1);
+    }
+    $options[substr($key, 2)] = $value;
+}
+
+$repoRoot = realpath(__DIR__ . '/..') ?: (__DIR__ . '/..');
+$application = (new ApplicationFactory())->create($repoRoot);
+
+$defaultMoodleRoot = $repoRoot . '/_smoke_test/moodle_fixture';
+
+if ($mode === 'phpunit') {
+    $payload = [
+        'moodle_root' => $options['moodle-root'] ?? $defaultMoodleRoot,
+        'test_ref' => $options['test'] ?? '',
+        'runtime_profile' => $options['profile'] ?? 'default_phpunit',
+        'stop_policy' => ['mode' => 'first_exception_or_error'],
+        'capture_policy' => [
+            'max_frames' => 25,
+            'max_locals_per_frame' => 10,
+            'max_string_length' => 512,
+            'include_args' => true,
+            'include_locals' => true,
+            'focus_top_frames' => 5,
+        ],
+        'timeout_seconds' => isset($options['timeout']) ? (int) $options['timeout'] : 120,
+    ];
+
+    $result = $application->debugPhpunitTest($payload);
+    fwrite(STDOUT, json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL);
+    exit(($result['ok'] ?? false) ? 0 : 1);
+}
+
+if ($mode === 'cli') {
+    $args = [];
+    if (isset($options['args']) && $options['args'] !== '') {
+        $args = preg_split('/\s+/', trim($options['args'])) ?: [];
+    }
+
+    $payload = [
+        'moodle_root' => $options['moodle-root'] ?? $defaultMoodleRoot,
+        'script_path' => $options['script'] ?? '',
+        'script_args' => $args,
+        'runtime_profile' => $options['profile'] ?? 'default_cli',
+        'stop_policy' => ['mode' => 'first_exception_or_error'],
+        'capture_policy' => [
+            'max_frames' => 25,
+            'max_locals_per_frame' => 10,
+            'max_string_length' => 512,
+            'include_args' => true,
+            'include_locals' => true,
+            'focus_top_frames' => 5,
+        ],
+        'timeout_seconds' => isset($options['timeout']) ? (int) $options['timeout'] : 120,
+    ];
+
+    $result = $application->debugCliScript($payload);
+    fwrite(STDOUT, json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL);
+    exit(($result['ok'] ?? false) ? 0 : 1);
+}
+
+fwrite(STDERR, "Unknown mode: {$mode}\n");
+exit(1);
