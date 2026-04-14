@@ -1,0 +1,171 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/schemas/moodle_debug.runtime_contract.schema.json",
+  "title": "moodle_debug runtime subprocess contract",
+  "$defs": {
+    "confidence": {
+      "type": "string",
+      "enum": ["high", "medium", "low"]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["ok", "warn", "fail"]
+    },
+    "intent": {
+      "type": "string",
+      "enum": [
+        "interpret_session",
+        "get_session",
+        "plan_phpunit",
+        "plan_cli",
+        "execute_phpunit",
+        "execute_cli",
+        "health"
+      ]
+    },
+    "capturePolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "max_frames": {"type": "integer", "minimum": 1, "maximum": 50},
+        "max_locals_per_frame": {"type": "integer", "minimum": 0, "maximum": 20},
+        "max_string_length": {"type": "integer", "minimum": 32, "maximum": 4096},
+        "include_args": {"type": "boolean"},
+        "include_locals": {"type": "boolean"},
+        "focus_top_frames": {"type": "integer", "minimum": 1, "maximum": 10}
+      }
+    },
+    "runtimeQuery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["intent"],
+      "properties": {
+        "intent": {"$ref": "#/$defs/intent"},
+        "session_id": {"type": "string", "minLength": 8, "maxLength": 128},
+        "runtime_profile": {"type": "string", "maxLength": 100},
+        "moodle_root": {"type": "string", "minLength": 1},
+        "test_ref": {"type": "string", "maxLength": 500},
+        "script_path": {"type": "string", "maxLength": 500},
+        "script_args": {
+          "type": "array",
+          "maxItems": 20,
+          "items": {"type": "string", "maxLength": 500}
+        },
+        "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 600},
+        "summary_depth": {"type": "string", "enum": ["brief", "standard", "detailed"]},
+        "include_result": {"type": "boolean"},
+        "capture_policy": {"$ref": "#/$defs/capturePolicy"}
+      }
+    },
+    "diagnostic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "message", "level"],
+      "properties": {
+        "code": {"type": "string", "maxLength": 100},
+        "message": {"type": "string", "maxLength": 500},
+        "level": {"type": "string", "enum": ["error", "warn", "info"]},
+        "hints": {
+          "type": "array",
+          "maxItems": 10,
+          "items": {"type": "string", "maxLength": 300}
+        },
+        "details": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "resultSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "properties": {
+        "kind": {"type": "string", "enum": ["runtime", "runtime_profile", "session_store", "debug_run"]},
+        "profile_name": {"type": ["string", "null"], "maxLength": 100},
+        "session_id": {"type": ["string", "null"], "maxLength": 128}
+      }
+    },
+    "resultItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "rank", "confidence", "source", "content", "diagnostics"],
+      "properties": {
+        "id": {"type": "string", "maxLength": 200},
+        "type": {"type": "string", "maxLength": 100},
+        "rank": {"type": "integer", "minimum": 1, "maximum": 20},
+        "confidence": {"$ref": "#/$defs/confidence"},
+        "source": {"$ref": "#/$defs/resultSource"},
+        "content": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "diagnostics": {
+          "type": "array",
+          "maxItems": 20,
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    "meta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "generated_at", "repo_root", "dry_run", "exit_code"],
+      "properties": {
+        "status": {"$ref": "#/$defs/status"},
+        "generated_at": {"type": "string", "format": "date-time"},
+        "repo_root": {"type": "string", "minLength": 1},
+        "dry_run": {"type": "boolean"},
+        "exit_code": {"type": "integer", "minimum": 0, "maximum": 255}
+      }
+    },
+    "runtimeResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool", "version", "query", "normalized_query", "intent", "results", "diagnostics", "meta"],
+      "properties": {
+        "tool": {"const": "moodle_debug"},
+        "version": {"type": "string", "minLength": 1, "maxLength": 50},
+        "query": {"type": "object", "additionalProperties": true},
+        "normalized_query": {"type": "object", "additionalProperties": true},
+        "intent": {"type": "string", "minLength": 1, "maxLength": 100},
+        "results": {
+          "type": "array",
+          "maxItems": 10,
+          "items": {"$ref": "#/$defs/resultItem"}
+        },
+        "diagnostics": {
+          "type": "array",
+          "maxItems": 20,
+          "items": {"$ref": "#/$defs/diagnostic"}
+        },
+        "meta": {"$ref": "#/$defs/meta"}
+      }
+    }
+  },
+  "runtime_query_request": {
+    "$ref": "#/$defs/runtimeQuery"
+  },
+  "runtime_query_response": {
+    "$ref": "#/$defs/runtimeResponse"
+  },
+  "health_request": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "profile_names": {
+        "type": "array",
+        "maxItems": 10,
+        "items": {"type": "string", "maxLength": 100}
+      },
+      "listener_bind_address": {"type": "string", "maxLength": 100},
+      "listener_port": {"type": "integer", "minimum": 1, "maximum": 65535}
+    }
+  },
+  "health_response": {
+    "$ref": "#/$defs/runtimeResponse"
+  }
+}

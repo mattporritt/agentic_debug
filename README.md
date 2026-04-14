@@ -16,6 +16,8 @@ What is implemented:
 - `get_debug_session`
 - `summarise_debug_session`
 - `map_stack_to_moodle_context`
+- runtime-facing `runtime-query` CLI
+- runtime-facing `health` CLI
 - official PHP MCP SDK stdio server wiring
 - `MockDebugBackend` for fast deterministic tests
 - `XdebugDebugBackend` for real step-debug launches over a local DBGp listener
@@ -27,6 +29,7 @@ Current backend model:
 - backend selection is profile-driven
 - mock profiles keep the existing deterministic phase-2 behavior
 - real profiles launch PHP inside the Moodle Docker `webserver` container and capture stack/locals from a live DBGp session back to a host listener
+- the repository now also exposes a subprocess-friendly runtime CLI for sibling-tool orchestration
 
 Current Phase 2 contract details:
 
@@ -246,6 +249,125 @@ Mock CLI flow:
 ```bash
 php bin/moodle-debug run cli --script "admin/cli/some_script.php"
 ```
+
+## Runtime-facing CLI
+
+`moodle_debug` now supports a sibling-tool style runtime interface in addition to MCP usage.
+
+Runtime mode is designed for subprocess orchestration:
+
+- JSON only on stdout
+- explicit bounded intents only
+- no interactive prompts
+- no natural-language auto-debugging
+- suitable for health checks, dry runs, session retrieval, interpretation, and explicit execution
+
+Available commands:
+
+```bash
+php bin/moodle-debug runtime-query --json '{...}'
+php bin/moodle-debug health --json '{}'
+```
+
+Runtime schemas live in [runtime_contract.schema.json](/Users/mattp/projects/agentic_debug/docs/moodle_debug/schemas/runtime_contract.schema.json). This is separate from the MCP schema and does not replace the MCP tool contract.
+
+Supported runtime intents:
+
+- `interpret_session`
+- `get_session`
+- `plan_phpunit`
+- `plan_cli`
+- `execute_phpunit`
+- `execute_cli`
+
+Example runtime requests:
+
+Plan a PHPUnit run without launching it:
+
+```bash
+php bin/moodle-debug runtime-query --json '{
+  "intent": "plan_phpunit",
+  "moodle_root": "/Users/mattp/projects/agentic_debug/_smoke_test/moodle_fixture",
+  "runtime_profile": "default_phpunit",
+  "test_ref": "mod_assign\\tests\\grading_test::test_grade_submission"
+}'
+```
+
+Execute a bounded CLI debug run:
+
+```bash
+php bin/moodle-debug runtime-query --json '{
+  "intent": "execute_cli",
+  "moodle_root": "/Users/mattp/projects/agentic_debug/_smoke_test/moodle_fixture",
+  "runtime_profile": "default_cli",
+  "script_path": "admin/cli/some_script.php"
+}'
+```
+
+Interpret an existing session:
+
+```bash
+php bin/moodle-debug runtime-query --json '{
+  "intent": "interpret_session",
+  "session_id": "mds_example_session_id"
+}'
+```
+
+Health check:
+
+```bash
+php bin/moodle-debug health --json '{}'
+```
+
+Runtime envelope shape:
+
+- `tool`: stable tool id, always `moodle_debug`
+- `version`: runtime contract version
+- `query`: original request payload
+- `normalized_query`: request after defaults/normalization
+- `intent`: explicit runtime intent
+- `results`: ordered machine-friendly result items
+- `diagnostics`: structured warnings/errors
+- `meta`: status, timestamp, dry-run flag, repo root, exit code
+
+Each runtime result item includes:
+
+- `id`
+- `type`
+- `rank`
+- `confidence`
+- `source`
+- `content`
+- `diagnostics`
+
+Machine-friendly investigation fields exposed in execution and interpretation results include:
+
+- likely-fault file path
+- likely-fault class/function when available
+- candidate frame shortlist
+- Moodle component
+- subsystem
+- issue category
+- confidence
+- inspection targets
+- rerun command
+- session provenance
+
+Plan mode is safe for proactive orchestration:
+
+- it validates the target
+- resolves the runtime profile
+- resolves backend kind and transport
+- builds the intended command
+- reports listener callback host/port
+- does not launch a debug session
+
+Health is also safe for proactive orchestration:
+
+- it checks config/session-store readiness
+- reports Docker/Xdebug profile readiness conservatively
+- probes listener bind capability lightly
+- does not launch a debug target
 
 Real Xdebug PHPUnit flow:
 

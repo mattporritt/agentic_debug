@@ -7,6 +7,7 @@ Implementation note:
 - The original design assumed a generic debugger MCP or adapter under the Moodle-aware wrapper.
 - The current repository implementation keeps the same public MCP contract and internal seam, but the real backend phase uses an in-process DBGp listener implemented inside `moodle_debug` rather than depending on a separate debugger MCP.
 - This keeps the architecture aligned with the original wrapper goal while staying locally scriptable and testable for PHPUnit and CLI workflows.
+- The repository now also exposes a runtime-facing JSON CLI intended for sibling-tool orchestration. This subprocess contract sits alongside the MCP contract and does not replace it.
 
 `moodle_debug` is a Moodle-aware MCP server that orchestrates deterministic, local debug sessions for Moodle CLI commands and PHPUnit tests by coordinating:
 

@@ -10,15 +10,23 @@ use MoodleDebug\server\McpServerFactory;
 require_once __DIR__ . '/../vendor/autoload.php';
 
 $command = $argv[1] ?? null;
+$repoRoot = realpath(__DIR__ . '/..') ?: (__DIR__ . '/..');
+$applicationFactory = new ApplicationFactory();
 
 if ($command === 'server') {
     $server = (new McpServerFactory())->create(__DIR__ . '/..');
     exit($server->run(new StdioTransport()));
 }
 
+if ($command === 'runtime-query' || $command === 'health') {
+    exit($applicationFactory->createRuntimeCli($repoRoot)->execute($argv));
+}
+
 if ($command !== 'run') {
     fwrite(STDERR, "Usage:\n");
     fwrite(STDERR, "  php bin/moodle-debug server\n");
+    fwrite(STDERR, "  php bin/moodle-debug runtime-query --json '{\"intent\":\"plan_phpunit\",\"test_ref\":\"mod_assign\\\\tests\\\\grading_test::test_grade_submission\"}'\n");
+    fwrite(STDERR, "  php bin/moodle-debug health\n");
     fwrite(STDERR, "  php bin/moodle-debug run phpunit --test \"mod_assign\\\\tests\\\\grading_test::test_grade_submission\"\n");
     fwrite(STDERR, "  php bin/moodle-debug run phpunit --profile real_xdebug_phpunit --test \"mod_assign\\\\tests\\\\grading_test::test_grade_submission\"\n");
     fwrite(STDERR, "  php bin/moodle-debug run cli --script \"admin/cli/some_script.php\"\n");
@@ -38,8 +46,7 @@ for ($i = 3; $i < count($argv); $i += 2) {
     $options[substr($key, 2)] = $value;
 }
 
-$repoRoot = realpath(__DIR__ . '/..') ?: (__DIR__ . '/..');
-$application = (new ApplicationFactory())->create($repoRoot);
+$application = $applicationFactory->create($repoRoot);
 
 $defaultMoodleRoot = $repoRoot . '/_smoke_test/moodle_fixture';
 
