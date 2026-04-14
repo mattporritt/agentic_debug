@@ -9,6 +9,8 @@ use PHPUnit\Framework\TestCase;
 
 final class RealXdebugBackendTest extends TestCase
 {
+    private ?int $assignedPort = null;
+
     protected function setUp(): void
     {
         if (getenv('MOODLE_DEBUG_RUN_REAL_XDEBUG_TESTS') !== '1') {
@@ -31,10 +33,24 @@ final class RealXdebugBackendTest extends TestCase
             self::markTestSkipped("Docker service {$service} is not available in the current Moodle Docker environment.");
         }
 
-        $this->waitForPortToBeFree(9003);
+        $this->assignedPort = $this->portForCurrentTest();
+        putenv('MOODLE_DEBUG_XDEBUG_CLIENT_PORT=' . $this->assignedPort);
+        $_ENV['MOODLE_DEBUG_XDEBUG_CLIENT_PORT'] = (string) $this->assignedPort;
+        $this->waitForPortToBeFree($this->assignedPort);
     }
 
-    public function testRealPhpunitWorkflowCapturesException(): void
+    protected function tearDown(): void
+    {
+        if ($this->assignedPort !== null) {
+            $this->waitForPortToBeFree($this->assignedPort, 120, 250000);
+        }
+
+        putenv('MOODLE_DEBUG_XDEBUG_CLIENT_PORT');
+        unset($_ENV['MOODLE_DEBUG_XDEBUG_CLIENT_PORT']);
+        $this->assignedPort = null;
+    }
+
+    public function testRealPhpunitWorkflowCapturesMeaningfulBreakpointStop(): void
     {
         $repoRoot = dirname(__DIR__, 2);
         $application = (new ApplicationFactory())->create($repoRoot);
@@ -60,7 +76,7 @@ final class RealXdebugBackendTest extends TestCase
         self::assertSame('breakpoint', $result['result']['stop_event']['reason']);
     }
 
-    public function testRealCliWorkflowCapturesException(): void
+    public function testRealCliWorkflowCapturesMeaningfulBreakpointStop(): void
     {
         $repoRoot = dirname(__DIR__, 2);
         $application = (new ApplicationFactory())->create($repoRoot);
@@ -142,7 +158,7 @@ final class RealXdebugBackendTest extends TestCase
     private function waitForPortToBeFree(int $port, int $attempts = 80, int $sleepMicros = 250000): void
     {
         for ($attempt = 0; $attempt < $attempts; $attempt++) {
-            $server = @stream_socket_server("tcp://0.0.0.0:{$port}", $errno, $error);
+            $server = @stream_socket_server("tcp://127.0.0.1:{$port}", $errno, $error);
             if (is_resource($server)) {
                 fclose($server);
                 return;
@@ -152,5 +168,15 @@ final class RealXdebugBackendTest extends TestCase
         }
 
         self::markTestSkipped("Port {$port} is still in use after waiting for the previous real debug run to release it.");
+    }
+
+    private function portForCurrentTest(): int
+    {
+        return match ($this->name()) {
+            'testRealPhpunitWorkflowCapturesMeaningfulBreakpointStop' => 19031,
+            'testRealCliWorkflowCapturesMeaningfulBreakpointStop' => 19032,
+            'testRealCliWorkflowReturnsNoStopEventForNormalExit' => 19033,
+            default => 19039,
+        };
     }
 }

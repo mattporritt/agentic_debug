@@ -54,6 +54,7 @@ final class RuntimeProfileLoaderTest extends TestCase
         self::assertSame(['/tmp/codex-bin/moodle-docker-compose'], $profile->dockerComposeCommand);
         self::assertSame('alt-webserver', $profile->webserverService);
         self::assertSame('www-data', $profile->webserverUser);
+        self::assertSame(19103, $profile->xdebugClientPort);
         self::assertSame('/tmp/codex-moodle', $profile->pathMappings['/var/www/html']);
     }
 
@@ -91,6 +92,7 @@ final class RuntimeProfileLoaderTest extends TestCase
             'MOODLE_DOCKER_BIN_DIR=/tmp/codex-bin',
             'WEBSERVER_SERVICE=alt-webserver',
             'WEBSERVER_USER=www-data',
+            'MOODLE_DEBUG_XDEBUG_CLIENT_PORT=19103',
         ]));
 
         return $path;

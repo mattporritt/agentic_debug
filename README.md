@@ -103,6 +103,16 @@ For the shipped real profiles:
 - `xdebug_client_host` defaults to `host.docker.internal`
 - `listener_bind_address` defaults to `0.0.0.0`
 
+## Listener port strategy
+
+- The default real-backend listener port remains `9003`
+- `moodle_debug` binds that host port before launching the Docker-backed PHP target
+- If the port is transiently busy, the backend retries a small bounded number of times before failing
+- If the port remains occupied, the run fails with `LISTENER_BIND_FAILED`
+- For opt-in real tests, `MOODLE_DEBUG_XDEBUG_CLIENT_PORT` can be set to place each run on a deterministic alternate port
+
+Once the DBGp callback is accepted, the listener socket is released immediately so later runs do not wait for the whole session lifecycle to finish before reusing the port.
+
 ## Codex-style environment compatibility
 
 `moodle_debug` can reuse the same environment conventions as the Moodle Codex runner without depending on the Codex repository itself.
@@ -134,7 +144,7 @@ At a high level:
 2. It launches the selected PHP target inside the Docker `webserver` container using `moodle-docker-compose exec`.
 3. Xdebug inside that container connects back to `moodle_debug` on the host.
 4. The backend sets exception breakpoints and runs the target.
-5. On stop, it captures stack frames and bounded locals.
+5. On stop, it normalizes the captured event into a stable stop reason such as `exception`, `breakpoint`, or `target_exit`, then captures stack frames and bounded locals.
 6. It persists the same artifact-backed session shape used by the mock backend.
 
 This phase does not expose live stepping as MCP tools. Any continue/feature negotiation is internal to the backend adapter only.
@@ -245,6 +255,8 @@ The real integration tests skip unless:
 - the configured `webserver` service exists in the current Moodle Docker environment
 - `MOODLE_DIR` points at a real Moodle checkout mounted into the Docker `webserver`
 
+For the most repeatable real runs, set `MOODLE_DEBUG_XDEBUG_CLIENT_PORT` explicitly when running one-off verification or CI-style checks.
+
 Optional profile overrides:
 
 - `MOODLE_DEBUG_REAL_PHPUNIT_PROFILE`
@@ -258,14 +270,32 @@ Optional profile overrides:
 - `DOCKER_EXEC_FAILED`: the host could invoke Docker, but the container-side exec failed
 - `XDEBUG_CALLBACK_HOST_UNRESOLVABLE`: the callback host, usually `host.docker.internal`, did not resolve inside the container
 - `XDEBUG_NOT_ENABLED`: Xdebug is not installed or enabled in the container PHP runtime
-- `LISTENER_BIND_FAILED`: the host listener address or port could not be bound
+- `LISTENER_BIND_FAILED`: the host listener address or port could not be bound; diagnostic details distinguish port-in-use, permission, and invalid-address failures
 - `XDEBUG_CONNECTION_TIMEOUT`: the container never connected back to the host listener
 - `TARGET_FAILED_BEFORE_ATTACH`: the target exited before Xdebug connected
-- `NO_STOP_EVENT`: the target completed without hitting an exception/error stop
+- `NO_STOP_EVENT`: the target completed after attaching but without hitting a meaningful debug stop
 
 ## Common failure modes
 
 - `DBGP_HANDSHAKE_FAILED` or `DBGP_PROTOCOL_ERROR`: the callback was established but the DBGp exchange failed
+
+## Stop reason interpretation
+
+- `exception`: Xdebug reported an exception breakpoint and the result includes an exception payload
+- `breakpoint`: Xdebug stopped at a meaningful breakpoint, but no exception payload was captured
+- `target_exit`: the target completed after attaching without a meaningful stop; callers receive `NO_STOP_EVENT`
+- `timeout`: the backend timed out before a meaningful stop was captured
+
+Summaries follow the normalized stop reason directly and do not imply an exception occurred unless an exception payload was actually captured.
+
+## Docker-backed rerun metadata
+
+`result.rerun` is the stable rerun recipe returned to agents:
+
+- `rerun.command` is always the complete executable command array to repeat the run
+- `rerun.cwd` is the host working directory for that command
+- `rerun.launcher` may be empty for Docker-backed runs because `rerun.command` already contains the full `moodle-docker-compose exec ...` transport recipe
+- `rerun.notes` explains whether launcher and command are intentionally split for the current backend
 
 ## Verification status in this repository
 
@@ -277,7 +307,7 @@ The default test suite verifies:
 - DBGp XML parsing helpers
 - backend error mapping
 
-The real Xdebug integration tests are present but opt-in. They were not runnable in the current execution environment because Xdebug is not installed here.
+The real Xdebug integration tests are present but opt-in. They use deterministic alternate listener ports when `MOODLE_DEBUG_XDEBUG_CLIENT_PORT` is set by the test harness.
 The real backend is Docker-first; host-native PHP is still supported by the internal transport model, but it is not the primary documented workflow.
 
 ## Smoke fixture

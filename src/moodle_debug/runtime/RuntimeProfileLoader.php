@@ -137,6 +137,11 @@ final class RuntimeProfileLoader
             $webserverUser = $this->environmentValues['WEBSERVER_USER'];
         }
 
+        $xdebugClientPort = (int) ($profile['xdebug_client_port'] ?? 9003);
+        if (isset($this->environmentValues['MOODLE_DEBUG_XDEBUG_CLIENT_PORT'])) {
+            $xdebugClientPort = (int) $this->environmentValues['MOODLE_DEBUG_XDEBUG_CLIENT_PORT'];
+        }
+
         $workingDirectory = (string) ($profile['working_directory'] ?? $moodleRoot);
         $containerWorkingDirectory = isset($profile['container_working_directory']) ? ($profile['container_working_directory'] !== null ? (string) $profile['container_working_directory'] : null) : null;
         $pathMappings = is_array($profile['path_mappings'] ?? null) ? $profile['path_mappings'] : [];
@@ -169,7 +174,7 @@ final class RuntimeProfileLoader
             'xdebug_start_with_request' => (string) ($profile['xdebug_start_with_request'] ?? 'yes'),
             'xdebug_start_upon_error' => (string) ($profile['xdebug_start_upon_error'] ?? 'yes'),
             'xdebug_client_host' => (string) ($profile['xdebug_client_host'] ?? ($executionTransport === 'docker_exec' ? 'host.docker.internal' : '127.0.0.1')),
-            'xdebug_client_port' => (int) ($profile['xdebug_client_port'] ?? 9003),
+            'xdebug_client_port' => $xdebugClientPort,
             'xdebug_log' => isset($profile['xdebug_log']) ? ($profile['xdebug_log'] !== null ? (string) $profile['xdebug_log'] : null) : null,
             'xdebug_idekey' => isset($profile['xdebug_idekey']) ? ($profile['xdebug_idekey'] !== null ? (string) $profile['xdebug_idekey'] : null) : null,
             'php_ini_overrides' => is_array($profile['php_ini_overrides'] ?? null) ? $profile['php_ini_overrides'] : [],

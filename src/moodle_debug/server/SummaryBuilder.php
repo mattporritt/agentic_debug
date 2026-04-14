@@ -69,7 +69,7 @@ final class SummaryBuilder
             'confidence' => $faultAnnotation['confidence'] ?? 'medium',
             'suggested_next_actions' => [
                 'Inspect the probable fault frame and its immediate caller.',
-                'Re-run the same mocked workflow with the same selector or script to confirm reproducibility.',
+                'Re-run the same workflow with the same selector or script to confirm reproducibility.',
             ],
         ];
     }

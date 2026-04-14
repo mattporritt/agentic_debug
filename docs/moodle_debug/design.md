@@ -848,6 +848,7 @@ The canonical failure catalog is also encoded in the schema file. v1 should stan
 | `DOCKER_SERVICE_NOT_FOUND` | concise, factual | no | Verify `WEBSERVER_SERVICE` or the runtime profile service name |
 | `DOCKER_EXEC_FAILED` | concise, factual | maybe | Inspect normalized docker exec command and stderr |
 | `XDEBUG_CALLBACK_HOST_UNRESOLVABLE` | concise, factual | yes | Verify `host.docker.internal` or override `xdebug_client_host` |
+| `LISTENER_BIND_FAILED` | concise, factual | maybe | Distinguish port-in-use vs invalid bind address vs permission failure in diagnostics |
 | `DEBUGGER_TRANSPORT_UNAVAILABLE` | concise, factual | yes | Verify generic debugger service/adapter is reachable |
 | `TARGET_FAILED_BEFORE_ATTACH` | concise, factual | maybe | Check command/bootstrap failure and runtime logs |
 | `NO_STOP_EVENT` | concise, factual | yes | Increase timeout or verify stop policy and reproducibility |
@@ -878,6 +879,7 @@ Behavior requirements:
 - session metadata
 - normalized target metadata
 - stop reason
+  - `breakpoint` is valid and distinct from `exception`; summaries must not blur them together
 - exception summary if present
 - structured stack frames
 - bounded locals for selected frames
@@ -885,6 +887,8 @@ Behavior requirements:
 - probable fault location
 - suggested next actions
 - reproducible rerun command or structured launch recipe
+  - `rerun.command` may be fully self-contained for Docker-backed runs
+  - `rerun.launcher` may therefore be intentionally empty
 - debug transcript metadata (event counts/timestamps), not full verbose transport logs
 
 ### Not in v1

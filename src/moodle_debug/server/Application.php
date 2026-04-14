@@ -242,7 +242,8 @@ final class Application
                 return ErrorFactory::failure('TARGET_FAILED_BEFORE_ATTACH', 'Target exited before a debugger stop event was captured.', true);
             }
 
-            unset($stopEvent['attached']);
+            $backendStop = $stopEvent;
+            unset($stopEvent['attached'], $stopEvent['raw_status'], $stopEvent['raw_reason']);
 
             $capturePolicy = $input['capture_policy'];
             $frames = $this->backend->read_stack((string) $preparedSession['backend_session_id'], (int) $capturePolicy['max_frames']);
@@ -299,6 +300,9 @@ final class Application
                         $profile->backendKind === 'xdebug'
                             ? 'Real Xdebug backend; launch plan reflects the actual PHP command used for this session.'
                             : 'Mock backend only; no real PHP process is launched in this phase.',
+                        $profile->backendKind === 'xdebug' && $profile->executionTransport === 'docker_exec'
+                            ? 'For Docker-backed runs, launcher may be empty because command already contains the full docker exec transport recipe.'
+                            : 'Launcher and command are intentionally separated for direct reruns.',
                         'Execution plan is deterministic for the same input payload and profile.',
                     ],
                 ],
@@ -309,6 +313,7 @@ final class Application
                 'session' => $sessionState,
                 'result' => $result,
                 'launch' => $launch,
+                'backend_stop' => $backendStop,
             ];
 
             try {

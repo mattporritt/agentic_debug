@@ -45,6 +45,7 @@ final class CodexEnvironmentLoader
             'MOODLE_DOCKER_BIN_DIR',
             'WEBSERVER_SERVICE',
             'WEBSERVER_USER',
+            'MOODLE_DEBUG_XDEBUG_CLIENT_PORT',
             'MOODLE_DEBUG_CODEX_ENV_FILE',
         ] as $key) {
             $value = $environment[$key] ?? getenv($key);

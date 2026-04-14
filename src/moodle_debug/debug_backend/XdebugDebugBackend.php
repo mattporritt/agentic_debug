@@ -9,6 +9,9 @@ use MoodleDebug\runtime\RuntimeProfile;
 
 final class XdebugDebugBackend implements DebugBackendInterface
 {
+    private const LISTENER_BIND_ATTEMPTS = 5;
+    private const LISTENER_BIND_RETRY_DELAY_MICROS = 100000;
+
     /**
      * @var array<string, array<string, mixed>>
      */
@@ -27,18 +30,7 @@ final class XdebugDebugBackend implements DebugBackendInterface
         $this->settingsBuilder->validateProfile($profile);
 
         $bindAddress = sprintf('tcp://%s:%d', $profile->listenerBindAddress, $profile->xdebugClientPort);
-        $errno = 0;
-        $error = '';
-        $server = @stream_socket_server($bindAddress, $errno, $error);
-        if (!is_resource($server)) {
-            throw new DebugBackendException(
-                'LISTENER_BIND_FAILED',
-                "Failed to bind Xdebug listener on {$bindAddress}: {$error}",
-                true,
-                ['Ensure the configured Xdebug port is free and reachable from the target runtime.'],
-                ['bind_address' => $bindAddress, 'errno' => $errno]
-            );
-        }
+        $server = $this->bindListenerSocket($bindAddress);
 
         stream_set_blocking($server, false);
 
@@ -128,6 +120,7 @@ final class XdebugDebugBackend implements DebugBackendInterface
         $connection = $this->acceptConnection($session, $connectTimeoutMs);
         $session['connection'] = $connection;
         $session['attached'] = true;
+        $this->releaseListenerSocket($session);
 
         $initPacket = $this->readPacket($connection, $connectTimeoutMs);
         $session['init'] = $this->xmlParser->parseInit($initPacket);
@@ -142,25 +135,7 @@ final class XdebugDebugBackend implements DebugBackendInterface
 
         if (($parsed['status'] ?? '') === 'break') {
             $session['stopped'] = true;
-            $exceptionType = (string) ($parsed['message']['exception'] ?? '');
-            $exceptionMessage = (string) ($parsed['message']['text'] ?? '');
-            $stopReason = $exceptionType !== '' ? 'exception' : (($parsed['reason'] ?? '') === 'ok' ? 'breakpoint' : 'unknown');
-            $stopEvent = [
-                'reason' => $stopReason,
-                'stopped_at' => $this->clock->now()->format(DATE_ATOM),
-                'attached' => true,
-            ];
-
-            if ($exceptionType !== '') {
-                $stopEvent['exception'] = [
-                    'type' => $exceptionType,
-                    'message' => $exceptionMessage !== '' ? $exceptionMessage : 'Xdebug stopped on an exception breakpoint.',
-                    'file' => $parsed['message']['filename'] ?? '',
-                    'line' => $parsed['message']['lineno'] ?? 0,
-                ];
-            }
-
-            return $stopEvent;
+            return $this->normalizeStopEvent($parsed);
         }
 
         if (($parsed['status'] ?? '') === 'stopping' || ($parsed['status'] ?? '') === 'stopped') {
@@ -316,7 +291,12 @@ final class XdebugDebugBackend implements DebugBackendInterface
                     'Target exited before Xdebug connected back to the debugger listener.',
                     true,
                     ['Ensure Xdebug is installed in the target PHP runtime and that client_host/client_port are reachable.'],
-                    ['process_exit_code' => $status['exitcode'] ?? null, 'stderr' => $this->readPipeTail($session['pipes'][2] ?? null)]
+                    [
+                        'process_exit_code' => $status['exitcode'] ?? null,
+                        'stderr' => $this->readPipeTail($session['pipes'][2] ?? null),
+                        'xdebug_client_host' => $session['profile'] instanceof RuntimeProfile ? $session['profile']->xdebugClientHost : null,
+                        'xdebug_client_port' => $session['profile'] instanceof RuntimeProfile ? $session['profile']->xdebugClientPort : null,
+                    ]
                 );
             }
 
@@ -328,7 +308,62 @@ final class XdebugDebugBackend implements DebugBackendInterface
             'Timed out waiting for an Xdebug connection from the launched target.',
             true,
             ['Verify xdebug.client_host and xdebug.client_port in the selected runtime profile.', 'Check firewall or container network routing if the target runs outside the host process.'],
-            ['stderr' => $this->readPipeTail($session['pipes'][2] ?? null)]
+            [
+                'stderr' => $this->readPipeTail($session['pipes'][2] ?? null),
+                'xdebug_client_host' => $session['profile'] instanceof RuntimeProfile ? $session['profile']->xdebugClientHost : null,
+                'xdebug_client_port' => $session['profile'] instanceof RuntimeProfile ? $session['profile']->xdebugClientPort : null,
+            ]
+        );
+    }
+
+    /**
+     * @return resource
+     */
+    private function bindListenerSocket(string $bindAddress)
+    {
+        $attempt = 0;
+        $lastErrno = 0;
+        $lastError = '';
+
+        while ($attempt < self::LISTENER_BIND_ATTEMPTS) {
+            $errno = 0;
+            $error = '';
+            $server = @stream_socket_server($bindAddress, $errno, $error);
+            if (is_resource($server)) {
+                return $server;
+            }
+
+            $attempt++;
+            $lastErrno = $errno;
+            $lastError = $error;
+
+            if ($this->classifyBindFailure($errno, $error) !== 'port_in_use' || $attempt >= self::LISTENER_BIND_ATTEMPTS) {
+                break;
+            }
+
+            usleep(self::LISTENER_BIND_RETRY_DELAY_MICROS);
+        }
+
+        $failureKind = $this->classifyBindFailure($lastErrno, $lastError);
+        $retryable = in_array($failureKind, ['port_in_use', 'permission_denied'], true);
+        $hints = match ($failureKind) {
+            'port_in_use' => ['Stop the process currently listening on this port or choose a different configured Xdebug port.'],
+            'invalid_bind_address' => ['Verify listener_bind_address is a valid local bind address for the host machine.'],
+            'permission_denied' => ['Verify the host can bind this address and port, and that local security tooling is not blocking the listener.'],
+            default => ['Ensure the configured Xdebug port is free and reachable from the target runtime.'],
+        };
+
+        throw new DebugBackendException(
+            'LISTENER_BIND_FAILED',
+            "Failed to bind Xdebug listener on {$bindAddress}: {$lastError}",
+            $retryable,
+            $hints,
+            [
+                'bind_address' => $bindAddress,
+                'errno' => $lastErrno,
+                'failure_kind' => $failureKind,
+                'bind_attempts' => $attempt,
+            ]
         );
     }
 
@@ -497,6 +532,68 @@ final class XdebugDebugBackend implements DebugBackendInterface
 
         $contents = stream_get_contents($pipe);
         return $contents === false ? '' : trim($contents);
+    }
+
+    /**
+     * @param array<string, mixed> $parsed
+     * @return array<string, mixed>
+     */
+    private function normalizeStopEvent(array $parsed): array
+    {
+        $exceptionType = (string) ($parsed['message']['exception'] ?? '');
+        $exceptionMessage = (string) ($parsed['message']['text'] ?? '');
+        $rawReason = (string) ($parsed['reason'] ?? '');
+        $reason = $exceptionType !== '' ? 'exception' : ($rawReason === 'ok' ? 'breakpoint' : 'unknown');
+
+        $stopEvent = [
+            'reason' => $reason,
+            'stopped_at' => $this->clock->now()->format(DATE_ATOM),
+            'attached' => true,
+            'raw_status' => (string) ($parsed['status'] ?? ''),
+            'raw_reason' => $rawReason,
+        ];
+
+        if ($exceptionType !== '') {
+            $stopEvent['exception'] = [
+                'type' => $exceptionType,
+                'message' => $exceptionMessage !== '' ? $exceptionMessage : 'Xdebug stopped on an exception breakpoint.',
+                'file' => $parsed['message']['filename'] ?? '',
+                'line' => $parsed['message']['lineno'] ?? 0,
+            ];
+        }
+
+        return $stopEvent;
+    }
+
+    /**
+     * @param array<string, mixed> $session
+     */
+    private function releaseListenerSocket(array &$session): void
+    {
+        if (is_resource($session['server'] ?? null)) {
+            @fclose($session['server']);
+        }
+
+        $session['server'] = null;
+    }
+
+    private function classifyBindFailure(int $errno, string $error): string
+    {
+        $normalized = strtolower($error);
+
+        if ($errno === 98 || $errno === 48 || str_contains($normalized, 'address already in use')) {
+            return 'port_in_use';
+        }
+
+        if ($errno === 13 || str_contains($normalized, 'permission denied')) {
+            return 'permission_denied';
+        }
+
+        if ($errno === 99 || $errno === 49 || str_contains($normalized, 'cannot assign requested address') || str_contains($normalized, 'invalid argument')) {
+            return 'invalid_bind_address';
+        }
+
+        return 'unknown';
     }
 
     /**
