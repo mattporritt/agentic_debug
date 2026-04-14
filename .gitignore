@@ -1,0 +1,4 @@
+/vendor/
+/.phpunit.result.cache
+/_smoke_test/moodle_debug_sessions/
+/.codex.env

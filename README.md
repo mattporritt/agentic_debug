@@ -58,9 +58,24 @@ What comes next:
 
 ## Install
 
+Dependencies are not committed to this repository. After cloning or after any dependency change, install them locally with Composer.
+
 ```bash
 composer install
 ```
+
+Recommended first-run setup:
+
+```bash
+composer install
+vendor/bin/phpunit
+```
+
+Notes:
+
+- `composer.lock` is committed and should be used for reproducible installs
+- `vendor/` is intentionally ignored and must be created locally
+- if you pull changes that update `composer.lock`, run `composer install` again
 
 ## Runtime profiles
 
