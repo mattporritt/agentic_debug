@@ -52,6 +52,8 @@ final class DebugCliWorkflowTest extends TestCase
         self::assertSame('cli', $result['result']['target']['type']);
         self::assertSame('cli', $result['session']['runtime_profile']['launcher_kind']);
         self::assertSame('core_admin', $result['result']['moodle_mapping']['annotations'][0]['component']);
+        self::assertSame('cli_workflow', $result['result']['moodle_mapping']['likely_issue']['category']);
+        self::assertStringContainsString('CLI entrypoint', implode(' ', $result['result']['summary']['suggested_next_actions']));
     }
 
     public function testBuildsExplicitDockerBackedRerunMetadata(): void

@@ -40,6 +40,10 @@ final class DebugPhpunitWorkflowTest extends TestCase
         self::assertSame('phpunit', $result['result']['target']['type']);
         self::assertSame('phpunit', $result['session']['runtime_profile']['launcher_kind']);
         self::assertSame('mod_assign', $result['result']['moodle_mapping']['annotations'][0]['component']);
+        self::assertSame('production_frame', $result['result']['moodle_mapping']['annotations'][0]['frame_kind']);
+        self::assertSame('plugin_logic', $result['result']['moodle_mapping']['likely_issue']['category']);
+        self::assertStringContainsString('mod_assign', $result['result']['summary']['headline']);
+        self::assertStringContainsString('failing PHPUnit selector', implode(' ', $result['result']['summary']['suggested_next_actions']));
 
         $session = $app->getDebugSession([
             'session_id' => $result['session']['session']['session_id'],

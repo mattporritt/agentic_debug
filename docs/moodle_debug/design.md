@@ -601,6 +601,11 @@ Every interpretation result must separate:
 - inferences: Moodle-aware conclusions drawn from heuristics
 - confidence: `high`, `medium`, or `low`
 
+Current implementation detail:
+
+- `map_stack_to_moodle_context` now returns per-frame `frame_kind` plus a short `fault_ranking` shortlist and a top-level `likely_issue`
+- the public MCP tool surface is unchanged; this is a narrow response-shape enrichment inside the existing mapping payload
+
 ### Concrete heuristics
 
 #### Component and subsystem mapping
@@ -632,8 +637,9 @@ Indicators:
 
 Interpretation rules:
 
-- tag harness frames as `test_harness`
-- identify nearest non-harness Moodle production frame as likely actionable frame
+- classify harness frames as `test_frame`
+- de-prioritize `tests/`, `lib/phpunit/`, and vendor PHPUnit frames during likely-fault ranking
+- identify the nearest non-test Moodle production frame as the primary likely-fault candidate where possible
 
 #### Common Moodle execution contexts
 
@@ -647,33 +653,53 @@ Heuristics:
 - plugin callback/event: observer classes, callback naming patterns, hooks
 - CLI bootstrap/admin task: `admin/cli/`, `scheduled_task`, `adhoc_task`
 
+#### Frame kind classification
+
+The current implementation uses explicit frame-kind buckets:
+
+- `production_frame`
+- `test_frame`
+- `framework_frame`
+- `bootstrap_frame`
+- `container_frame`
+- `execution_context_frame`
+- `unknown`
+
+These buckets are used both for human-readable interpretation and for explainable ranking.
+
 #### Fault location inference
 
 Candidate fault frame selection heuristic:
 
-1. take top stack frames near stop event
-2. remove known debugger/harness/vendor noise
-3. prefer first Moodle frame in plugin or core business logic
-4. if exception originates in a generic helper, also identify nearest caller frame with domain context
+1. classify each frame by component, subsystem, issue category, and frame kind
+2. assign a small heuristic score:
+   - raise production Moodle frames
+   - raise subsystem-specific frames such as external API, rendering, access control, forms, or CLI import/admin flows
+   - raise frames that match the recorded exception file
+   - lower PHPUnit harness, vendor/framework, bootstrap, and container/runtime wrapper frames
+3. sort into a short ranked shortlist instead of returning only one opaque answer
+4. expose the top candidate as `probable_fault_frame_index`, but keep supporting candidates and rationale in `fault_ranking`
 
 Output should include:
 
-- `probable_fault_frame`
-- `supporting_frames`
-- `reasoning`
+- `probable_fault_frame_index`
+- `candidate_fault_frame_indexes`
+- `fault_ranking`
+- `likely_issue`
 - `confidence`
 
 #### Category detection examples
 
-- `core`
-- `plugin`
-- `renderer`
+- `core_logic`
+- `plugin_logic`
+- `renderer_output`
 - `external_api`
 - `access_control`
 - `form_processing`
-- `database`
-- `task_execution`
-- `test_harness`
+- `cli_workflow`
+- `test_only`
+- `bootstrap_infrastructure`
+- `execution_context`
 - `unknown`
 
 ### Honesty requirements
@@ -688,6 +714,10 @@ Examples:
 
 - Fact: "Exception thrown from `lib/dml/moodle_database.php`."
 - Inference: "The actionable cause may be an upstream caller passing invalid data."
+- Confidence: `medium`
+
+- Fact: "Stop reason is `breakpoint` and the top-ranked frame is `admin/cli/import.php`."
+- Inference: "This is likely the best CLI inspection point, but not confirmed root cause."
 - Confidence: `medium`
 
 ## 9. Guardrails and safety boundaries

@@ -74,6 +74,8 @@ final class RealXdebugBackendTest extends TestCase
         self::assertTrue($result['ok'], json_encode($result));
         self::assertSame('phpunit', $result['session']['runtime_profile']['launcher_kind']);
         self::assertSame('breakpoint', $result['result']['stop_event']['reason']);
+        self::assertNotSame('unknown', $result['result']['moodle_mapping']['likely_issue']['category']);
+        self::assertNotEmpty($result['result']['summary']['suggested_next_actions']);
     }
 
     public function testRealCliWorkflowCapturesMeaningfulBreakpointStop(): void
@@ -101,6 +103,8 @@ final class RealXdebugBackendTest extends TestCase
         self::assertTrue($result['ok'], json_encode($result));
         self::assertSame('cli', $result['session']['runtime_profile']['launcher_kind']);
         self::assertSame('breakpoint', $result['result']['stop_event']['reason']);
+        self::assertSame('cli_workflow', $result['result']['moodle_mapping']['likely_issue']['category']);
+        self::assertStringContainsString('CLI entrypoint', implode(' ', $result['result']['summary']['suggested_next_actions']));
     }
 
     public function testRealCliWorkflowReturnsNoStopEventForNormalExit(): void

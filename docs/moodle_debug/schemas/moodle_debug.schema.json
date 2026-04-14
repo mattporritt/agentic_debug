@@ -428,6 +428,7 @@
           "required": [
             "frame_index",
             "category",
+            "frame_kind",
             "confidence",
             "facts",
             "inferences"
@@ -448,15 +449,28 @@
             "category": {
               "type": "string",
               "enum": [
-                "core",
-                "plugin",
-                "renderer",
+                "core_logic",
+                "plugin_logic",
+                "renderer_output",
                 "external_api",
                 "access_control",
                 "form_processing",
-                "database",
-                "task_execution",
-                "test_harness",
+                "cli_workflow",
+                "test_only",
+                "bootstrap_infrastructure",
+                "execution_context",
+                "unknown"
+              ]
+            },
+            "frame_kind": {
+              "type": "string",
+              "enum": [
+                "production_frame",
+                "test_frame",
+                "framework_frame",
+                "bootstrap_frame",
+                "container_frame",
+                "execution_context_frame",
                 "unknown"
               ]
             },
@@ -487,7 +501,9 @@
           "required": [
             "annotations",
             "execution_context",
-            "candidate_fault_frame_indexes"
+            "candidate_fault_frame_indexes",
+            "fault_ranking",
+            "likely_issue"
           ],
           "properties": {
             "annotations": {
@@ -522,6 +538,74 @@
             "probable_fault_frame_index": {
               "type": "integer",
               "minimum": 0
+            },
+            "fault_ranking": {
+              "type": "array",
+              "maxItems": 5,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "frame_index",
+                  "confidence",
+                  "rationale"
+                ],
+                "properties": {
+                  "frame_index": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "confidence": {
+                    "$ref": "#/properties/definitions/properties/confidence"
+                  },
+                  "rationale": {
+                    "type": "string",
+                    "maxLength": 400
+                  }
+                }
+              }
+            },
+            "likely_issue": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "category",
+                "confidence",
+                "rationale"
+              ],
+              "properties": {
+                "category": {
+                  "type": "string",
+                  "enum": [
+                    "core_logic",
+                    "plugin_logic",
+                    "renderer_output",
+                    "external_api",
+                    "access_control",
+                    "form_processing",
+                    "cli_workflow",
+                    "test_only",
+                    "bootstrap_infrastructure",
+                    "execution_context",
+                    "unknown"
+                  ]
+                },
+                "component": {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                "subsystem": {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                "confidence": {
+                  "$ref": "#/properties/definitions/properties/confidence"
+                },
+                "rationale": {
+                  "type": "string",
+                  "maxLength": 400
+                }
+              }
             }
           }
         },
@@ -1020,6 +1104,7 @@
                 },
                 "test_context": {
                   "type": "object",
+                  "minProperties": 1,
                   "additionalProperties": false,
                   "properties": {
                     "test_ref": {

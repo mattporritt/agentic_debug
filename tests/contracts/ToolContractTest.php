@@ -109,6 +109,16 @@ final class ToolContractTest extends TestCase
         self::assertTrue($validated['valid']);
     }
 
+    public function testSchemaAcceptsFrameKindFaultRankingAndLikelyIssue(): void
+    {
+        $result = $this->buildPhpunitResult();
+
+        self::assertArrayHasKey('frame_kind', $result['result']['moodle_mapping']['annotations'][0]);
+        self::assertArrayHasKey('fault_ranking', $result['result']['moodle_mapping']);
+        self::assertArrayHasKey('likely_issue', $result['result']['moodle_mapping']);
+        self::assertTrue($this->validator->validateToolOutput('debug_phpunit_test', $result)['valid']);
+    }
+
     public function testSchemaAcceptsGetDebugSessionIncludeResultOnly(): void
     {
         $validated = $this->validator->validateToolInput('get_debug_session', [

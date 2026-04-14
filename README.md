@@ -46,8 +46,20 @@ What remains mocked or intentionally limited:
 
 What comes next:
 
-- harden Moodle-aware interpretation heuristics
+- refine Moodle-aware interpretation heuristics for broader real-session shapes
 - add broader environment coverage once the Docker-first path is stable
+
+Current interpretation behavior:
+
+- `map_stack_to_moodle_context` classifies each captured frame with Moodle-aware `component`, `subsystem`, likely issue `category`, and `frame_kind`
+- mapping output also includes a short `fault_ranking` shortlist plus a top-level `likely_issue` with component, subsystem, rationale, and confidence
+- `summarise_debug_session` uses those signals to produce truthful facts, bounded inferences, and practical next actions
+
+Interpretation limits:
+
+- ranking is heuristic, not blame assignment
+- breakpoint stops are useful inspection points, not proof of root cause
+- confidence measures how strong the Moodle-specific signals are in captured artifacts, not certainty that a bug is found
 
 ## Layout
 
@@ -163,6 +175,46 @@ At a high level:
 6. It persists the same artifact-backed session shape used by the mock backend.
 
 This phase does not expose live stepping as MCP tools. Any continue/feature negotiation is internal to the backend adapter only.
+
+## Moodle-aware interpretation
+
+The interpretation layer only uses captured artifacts:
+
+- normalized stop reason
+- stack frames
+- bounded locals
+- workflow target metadata
+- Moodle path, namespace, and entrypoint conventions
+
+It does not do broad static indexing or hidden code analysis.
+
+High-level ranking rules:
+
+- prefer Moodle production frames over PHPUnit harness, vendor, bootstrap, and runtime wrapper frames
+- favor frames whose file matches a recorded exception file when an exception payload exists
+- de-prioritize `tests/`, `lib/phpunit/`, vendor, and setup/bootstrap frames
+- treat `admin/cli/...` entrypoints as meaningful CLI context, while still distinguishing context from confirmed cause
+- keep a short ranked shortlist instead of pretending the top frame is definitely the bug
+
+Likely issue categories currently include:
+
+- `core_logic`
+- `plugin_logic`
+- `renderer_output`
+- `external_api`
+- `access_control`
+- `form_processing`
+- `cli_workflow`
+- `test_only`
+- `bootstrap_infrastructure`
+- `execution_context`
+- `unknown`
+
+Facts vs inferences:
+
+- facts come directly from captured artifacts such as stop reason, top frame path, or exception type
+- inferences are Moodle-aware heuristics such as component, subsystem, issue category, and ranked likely-fault frames
+- `high`, `medium`, and `low` confidence describe the strength of those heuristics only
 
 ## Docker and Xdebug prerequisites
 
@@ -303,6 +355,8 @@ Optional profile overrides:
 
 Summaries follow the normalized stop reason directly and do not imply an exception occurred unless an exception payload was actually captured.
 
+Breakpoint-based summaries remain conservative: they describe the top-ranked frame as the best inspection point after de-prioritizing harness and infrastructure noise, not as a confirmed root cause.
+
 ## Docker-backed rerun metadata
 
 `result.rerun` is the stable rerun recipe returned to agents:
@@ -311,6 +365,12 @@ Summaries follow the normalized stop reason directly and do not imply an excepti
 - `rerun.cwd` is the host working directory for that command
 - `rerun.launcher` may be empty for Docker-backed runs because `rerun.command` already contains the full `moodle-docker-compose exec ...` transport recipe
 - `rerun.notes` explains whether launcher and command are intentionally split for the current backend
+
+## `map_stack_to_moodle_context` notes
+
+- `test_context` is optional
+- if provided in v1, it should carry meaningful data such as `test_ref`
+- an empty `test_context` object is rejected by schema validation rather than silently ignored
 
 ## Verification status in this repository
 
